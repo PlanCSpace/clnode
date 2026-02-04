@@ -109,28 +109,30 @@ src/
       agent.ts          — Agent lifecycle + context_summary
       context.ts        — Context entries (entry_type, content, tags[])
       filechange.ts     — File change tracking (Edit/Write)
-      task.ts           — Task state tracking
+      task.ts           — Task state tracking (5-stage: idea→planned→pending→in_progress→completed)
+      comment.ts        — Task comments CRUD
       activity.ts       — Activity log (details JSON)
 templates/
   hooks-config.json     — Hooks config template (HOOK_SCRIPT_PATH placeholder)
 data/                   — DuckDB file storage (gitignored)
 ```
 
-## DuckDB Schema (7 tables)
+## DuckDB Schema (8 tables)
 - **projects**: id, name, path (UNIQUE), created_at
 - **sessions**: id, project_id, started_at, ended_at, status
 - **agents**: id, session_id, agent_name, agent_type, parent_agent_id, status, started_at, completed_at, context_summary
 - **context_entries**: id(seq), session_id, agent_id, entry_type, content TEXT, tags VARCHAR[], created_at
 - **file_changes**: id(seq), session_id, agent_id, file_path, change_type, created_at
-- **tasks**: id(seq), project_id, title, description, status, assigned_to, created_at, updated_at
+- **tasks**: id(seq), project_id, title, description, status(idea/planned/pending/in_progress/completed), assigned_to, tags VARCHAR[], created_at, updated_at
+- **task_comments**: id(seq), task_id, author, comment_type(plan/review/status_change/result/note), content, created_at
 - **activity_log**: id(seq), session_id, agent_id, event_type, details JSON, created_at
 
 ## Hook Events (POST /hooks/:event)
 | Event | Purpose | Response |
 |-------|---------|----------|
 | SessionStart | Register session, link to project | {} |
-| SubagentStart | Register agent, return additionalContext | { hookSpecificOutput: { additionalContext } } |
-| SubagentStop | Finalize agent, store context_summary | {} |
+| SubagentStart | Register agent, auto-assign pending task, return additionalContext | { hookSpecificOutput: { additionalContext } } |
+| SubagentStop | Finalize agent, store context_summary, auto-complete tasks | {} |
 | PostToolUse | Track file changes (Edit/Write) | {} |
 | Stop | Log stop event | {} |
 | SessionEnd | End session, close all agents | {} |
@@ -173,6 +175,12 @@ clnode ui          # Open Web UI in browser
 - `GET /api/sessions/:id/activities` — Activities by session
 - `GET /api/agents[?active=true]` — Agent list
 - `GET /api/tasks[?project_id=X]` — Task list
+- `GET /api/tasks/:id` — Single task
+- `POST /api/tasks` — Create task (status default: "idea")
+- `PATCH /api/tasks/:id` — Update task (auto status_change comment)
+- `DELETE /api/tasks/:id` — Delete task + comments
+- `GET /api/tasks/:id/comments` — Task comments
+- `POST /api/tasks/:id/comments` — Add comment
 - `GET /api/activities[?limit=50]` — Recent activities
 
 ## Important Notes

@@ -7,6 +7,8 @@ import { recordFileChange } from "../services/filechange.js";
 import { logActivity } from "../services/activity.js";
 import { findProjectByPath, registerProject } from "../services/project.js";
 import { buildSmartContext, checkIncompleteTasks, buildPromptContext } from "../services/intelligence.js";
+import { findPendingTaskForAgent, getInProgressTasksForAgent, updateTask } from "../services/task.js";
+import { addComment } from "../services/comment.js";
 import { broadcast } from "./ws.js";
 
 /** Extract the last assistant text from a Claude Code agent transcript JSONL */
@@ -70,6 +72,18 @@ hooks.post("/:event", async (c) => {
         await logActivity(sessionId, agentId, "SubagentStart", { agent_name: agentName, agent_type: agentType });
         broadcast("SubagentStart", { session_id: sessionId, agent_id: agentId, agent_name: agentName });
 
+        // Auto-assign pending task to starting agent
+        try {
+          const pendingTask = await findPendingTaskForAgent(sessionId, agentName, agentType);
+          if (pendingTask) {
+            await updateTask(pendingTask.id, { status: "in_progress", assigned_to: agentName });
+            await addComment(pendingTask.id, "system", "status_change",
+              `Auto-assigned to agent ${agentName} and moved to in_progress`);
+          }
+        } catch (err) {
+          console.error("[hooks/SubagentStart] task auto-assign failed:", err);
+        }
+
         // Phase 3: Smart context injection
         const additionalContext = await buildSmartContext(sessionId, agentName, agentType, parentAgentId);
 
@@ -98,6 +112,21 @@ hooks.post("/:event", async (c) => {
             await addContextEntry(sessionId, agentId, "agent_summary", contextSummary, ["auto", agentName]);
           }
           // transcript_path is no longer stored as context — summary is extracted directly
+
+          // Auto-complete in_progress tasks for stopping agent
+          try {
+            const inProgressTasks = await getInProgressTasksForAgent(sessionId, agentName);
+            if (contextSummary && inProgressTasks.length > 0) {
+              for (const task of inProgressTasks) {
+                await updateTask(task.id, { status: "completed" });
+                await addComment(task.id, agentName, "result", contextSummary.slice(0, 500));
+                await addComment(task.id, "system", "status_change",
+                  `Auto-completed by agent ${agentName} on stop`);
+              }
+            }
+          } catch (err) {
+            console.error("[hooks/SubagentStop] task auto-complete failed:", err);
+          }
 
           // Phase 3: Todo Enforcer — check incomplete tasks
           const warning = await checkIncompleteTasks(sessionId, agentId, agentName);

@@ -25,6 +25,7 @@ async function initSchema(db: Database): Promise<void> {
     CREATE SEQUENCE IF NOT EXISTS file_changes_seq START 1;
     CREATE SEQUENCE IF NOT EXISTS tasks_seq START 1;
     CREATE SEQUENCE IF NOT EXISTS activity_log_seq START 1;
+    CREATE SEQUENCE IF NOT EXISTS task_comments_seq START 1;
   `);
 
   await db.exec(`
@@ -81,8 +82,18 @@ async function initSchema(db: Database): Promise<void> {
       description TEXT,
       status      VARCHAR DEFAULT 'pending',
       assigned_to VARCHAR,
+      tags        VARCHAR[],
       created_at  TIMESTAMP DEFAULT now(),
       updated_at  TIMESTAMP DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS task_comments (
+      id           INTEGER PRIMARY KEY DEFAULT nextval('task_comments_seq'),
+      task_id      INTEGER NOT NULL,
+      author       VARCHAR,
+      comment_type VARCHAR NOT NULL,
+      content      TEXT NOT NULL,
+      created_at   TIMESTAMP DEFAULT now()
     );
 
     CREATE TABLE IF NOT EXISTS activity_log (
@@ -94,6 +105,13 @@ async function initSchema(db: Database): Promise<void> {
       created_at TIMESTAMP DEFAULT now()
     );
   `);
+
+  // Migration: add tags column to existing tasks tables (idempotent)
+  try {
+    await db.exec(`ALTER TABLE tasks ADD COLUMN tags VARCHAR[]`);
+  } catch {
+    // Column already exists — ignore
+  }
 }
 
 export async function closeDb(): Promise<void> {

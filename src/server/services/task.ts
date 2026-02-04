@@ -1,18 +1,30 @@
 import { getDb } from "../db.js";
+import { deleteCommentsByTask } from "./comment.js";
 
 export async function createTask(
   projectId: string | null,
   title: string,
   description: string | null,
-  assignedTo: string | null
+  assignedTo: string | null,
+  status: string = "pending",
+  tags: string[] | null = null
 ): Promise<number> {
   const db = await getDb();
-  await db.run(
-    `INSERT INTO tasks (project_id, title, description, assigned_to) VALUES (?, ?, ?, ?)`,
-    projectId, title, description, assignedTo
+  const tagsSql = tags && tags.length > 0
+    ? `[${tags.map(t => `'${t.replace(/'/g, "''")}'`).join(",")}]::VARCHAR[]`
+    : "NULL";
+  const rows = await db.all(
+    `INSERT INTO tasks (project_id, title, description, assigned_to, status, tags)
+     VALUES (?, ?, ?, ?, ?, ${tagsSql}) RETURNING id`,
+    projectId, title, description, assignedTo, status
   );
-  const rows = await db.all(`SELECT lastval() as id`);
-  return (rows[0] as { id: number }).id;
+  return Number((rows[0] as { id: number }).id);
+}
+
+export async function getTask(id: number) {
+  const db = await getDb();
+  const rows = await db.all(`SELECT * FROM tasks WHERE id = ?`, id);
+  return rows.length > 0 ? rows[0] : null;
 }
 
 export async function updateTaskStatus(id: number, status: string): Promise<void> {
@@ -41,6 +53,7 @@ export async function updateTask(
     title?: string;
     description?: string | null;
     assigned_to?: string | null;
+    tags?: string[] | null;
   }
 ): Promise<boolean> {
   const db = await getDb();
@@ -63,22 +76,67 @@ export async function updateTask(
     updates.push("assigned_to = ?");
     values.push(fields.assigned_to);
   }
+  if (fields.tags !== undefined) {
+    if (fields.tags && fields.tags.length > 0) {
+      const tagsSql = `[${fields.tags.map(t => `'${t.replace(/'/g, "''")}'`).join(",")}]::VARCHAR[]`;
+      updates.push(`tags = ${tagsSql}`);
+    } else {
+      updates.push("tags = NULL");
+    }
+  }
 
   if (updates.length === 0) return false;
 
   updates.push("updated_at = now()");
   values.push(id);
 
-  const result = await db.run(
+  await db.run(
     `UPDATE tasks SET ${updates.join(", ")} WHERE id = ?`,
     ...values
   );
 
-  return (result.changes ?? 0) > 0;
+  return true;
 }
 
 export async function deleteTask(id: number): Promise<boolean> {
   const db = await getDb();
-  const result = await db.run(`DELETE FROM tasks WHERE id = ?`, id);
-  return (result.changes ?? 0) > 0;
+  await deleteCommentsByTask(id);
+  await db.run(`DELETE FROM tasks WHERE id = ?`, id);
+  return true;
+}
+
+export async function findPendingTaskForAgent(
+  sessionId: string,
+  agentName: string,
+  agentType: string | null
+): Promise<{ id: number; title: string } | null> {
+  const db = await getDb();
+  // Match by assigned_to = agentName or agentType, status = pending
+  const rows = await db.all(
+    `SELECT t.id, t.title
+     FROM tasks t
+     JOIN sessions s ON t.project_id = s.project_id
+     WHERE s.id = ?
+       AND t.status = 'pending'
+       AND (t.assigned_to = ? OR t.assigned_to = ?)
+     ORDER BY t.created_at ASC
+     LIMIT 1`,
+    sessionId, agentName, agentType ?? ""
+  );
+  return rows.length > 0 ? rows[0] as { id: number; title: string } : null;
+}
+
+export async function getInProgressTasksForAgent(
+  sessionId: string,
+  agentName: string
+): Promise<{ id: number; title: string }[]> {
+  const db = await getDb();
+  return db.all(
+    `SELECT t.id, t.title
+     FROM tasks t
+     JOIN sessions s ON t.project_id = s.project_id
+     WHERE s.id = ? AND t.assigned_to = ? AND t.status = 'in_progress'
+     ORDER BY t.created_at ASC`,
+    sessionId, agentName
+  ) as Promise<{ id: number; title: string }[]>;
 }

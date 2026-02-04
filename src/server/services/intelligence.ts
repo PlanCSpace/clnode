@@ -26,6 +26,12 @@ interface TaskRow {
   description: string | null;
   status: string;
   assigned_to: string | null;
+  tags: string[] | null;
+}
+
+interface TaskCommentRow {
+  content: string;
+  comment_type: string;
 }
 
 async function safeQuery<T>(label: string, fn: () => Promise<unknown[]>): Promise<T[]> {
@@ -155,21 +161,43 @@ export async function buildSmartContext(
     }
   }
 
-  // 6. Active tasks assigned to this agent
+  // 6. Active tasks assigned to this agent (with plan comments and tags)
   const tasks = await safeQuery<TaskRow>("assigned-tasks", () => db.all(
-    `SELECT t.title, t.description, t.status
+    `SELECT t.id, t.title, t.description, t.status, t.tags
      FROM tasks t
      JOIN sessions s ON t.project_id = s.project_id
-     WHERE s.id = ? AND t.assigned_to = ? AND t.status != 'completed'
-     ORDER BY t.created_at ASC`,
+     WHERE s.id = ? AND t.assigned_to = ? AND t.status NOT IN ('completed', 'idea')
+     ORDER BY
+       CASE t.status
+         WHEN 'in_progress' THEN 1
+         WHEN 'pending' THEN 2
+         WHEN 'planned' THEN 3
+         ELSE 4
+       END,
+       t.created_at ASC`,
     sessionId, agentName
   ));
 
   if (tasks.length > 0) {
-    const lines = tasks.map(
-      (t) => `- [${t.status}] ${t.title}${t.description ? ": " + t.description.slice(0, 100) : ""}`
-    );
-    sections.push(`## Your Assigned Tasks\n${lines.join("\n")}`);
+    const taskLines: string[] = [];
+    for (const t of tasks) {
+      const tagsStr = t.tags && t.tags.length > 0 ? ` [${t.tags.join(", ")}]` : "";
+      let line = `- [${t.status}] ${t.title}${tagsStr}${t.description ? ": " + t.description.slice(0, 100) : ""}`;
+      // Include latest plan comment for planned/pending tasks
+      if (t.status === "planned" || t.status === "pending") {
+        const planComments = await safeQuery<TaskCommentRow>("task-plan-comment", () => db.all(
+          `SELECT content FROM task_comments
+           WHERE task_id = ? AND comment_type = 'plan'
+           ORDER BY created_at DESC LIMIT 1`,
+          t.id
+        ));
+        if (planComments.length > 0) {
+          line += `\n  Plan: ${planComments[0].content.slice(0, 200)}`;
+        }
+      }
+      taskLines.push(line);
+    }
+    sections.push(`## Your Assigned Tasks\n${taskLines.join("\n")}`);
   }
 
   if (sections.length === 0) return "";
@@ -192,7 +220,7 @@ export async function checkIncompleteTasks(
       `SELECT t.title, t.status
        FROM tasks t
        JOIN sessions s ON t.project_id = s.project_id
-       WHERE s.id = ? AND t.assigned_to = ? AND t.status NOT IN ('completed', 'cancelled')
+       WHERE s.id = ? AND t.assigned_to = ? AND t.status IN ('pending', 'in_progress')
        ORDER BY t.created_at ASC`,
       sessionId, agentName
     );
@@ -231,20 +259,31 @@ export async function buildPromptContext(
     sections.push(`## Active Agents\n${lines.join("\n")}`);
   }
 
-  // Pending/in-progress tasks for this project
+  // Open tasks for this project (5-stage priority order, excluding completed)
   const tasks = await safeQuery<TaskRow>("prompt-tasks", () => db.all(
-    `SELECT t.title, t.status, t.assigned_to
+    `SELECT t.title, t.status, t.assigned_to, t.tags
      FROM tasks t
      JOIN sessions s ON t.project_id = s.project_id
-     WHERE s.id = ? AND t.status NOT IN ('completed', 'cancelled')
-     ORDER BY t.created_at ASC
+     WHERE s.id = ? AND t.status NOT IN ('completed')
+     ORDER BY
+       CASE t.status
+         WHEN 'in_progress' THEN 1
+         WHEN 'pending' THEN 2
+         WHEN 'planned' THEN 3
+         WHEN 'idea' THEN 4
+         ELSE 5
+       END,
+       t.created_at ASC
      LIMIT 10`,
     sessionId
   ));
 
   if (tasks.length > 0) {
     const lines = tasks.map(
-      (t) => `- [${t.status}] ${t.title}${t.assigned_to ? ` → ${t.assigned_to}` : ""}`
+      (t) => {
+        const tagsStr = t.tags && t.tags.length > 0 ? ` [${t.tags.join(", ")}]` : "";
+        return `- [${t.status}] ${t.title}${tagsStr}${t.assigned_to ? ` → ${t.assigned_to}` : ""}`;
+      }
     );
     sections.push(`## Open Tasks\n${lines.join("\n")}`);
   }

@@ -3,7 +3,8 @@ import { getAllSessions, getActiveSessions, getSession, getTotalSessionsCount, g
 import { getAllAgents, getActiveAgents, getAgentsBySession, getTotalAgentsCount, getActiveAgentsCount, deleteAgent } from "../services/agent.js";
 import { getContextBySession, getTotalContextEntriesCount, deleteContextByType } from "../services/context.js";
 import { getFileChangesBySession, getTotalFileChangesCount } from "../services/filechange.js";
-import { getAllTasks, getTasksByProject, createTask, updateTask, deleteTask } from "../services/task.js";
+import { getAllTasks, getTasksByProject, getTask, createTask, updateTask, deleteTask } from "../services/task.js";
+import { addComment, getCommentsByTask } from "../services/comment.js";
 import { getRecentActivities, getActivitiesBySession } from "../services/activity.js";
 import { getAllProjects } from "../services/project.js";
 
@@ -48,6 +49,70 @@ api.delete("/agents/:id", async (c) => {
 api.get("/tasks", async (c) => {
   const projectId = c.req.query("project_id");
   return c.json(projectId ? await getTasksByProject(projectId) : await getAllTasks());
+});
+
+api.get("/tasks/:id", async (c) => {
+  const task = await getTask(parseInt(c.req.param("id"), 10));
+  if (!task) return c.json({ error: "not found" }, 404);
+  return c.json(task);
+});
+
+api.post("/tasks", async (c) => {
+  const body = await c.req.json();
+  const { project_id, title, description, assigned_to, status, tags } = body;
+  if (!title) return c.json({ error: "title required" }, 400);
+  const id = await createTask(
+    project_id ?? null,
+    title,
+    description ?? null,
+    assigned_to ?? null,
+    status ?? "idea",
+    tags ?? null
+  );
+  return c.json({ ok: true, id }, 201);
+});
+
+api.patch("/tasks/:id", async (c) => {
+  const id = parseInt(c.req.param("id"), 10);
+  const body = await c.req.json();
+  const oldTask = await getTask(id);
+  if (!oldTask) return c.json({ error: "not found" }, 404);
+
+  const updated = await updateTask(id, body);
+  if (!updated) return c.json({ error: "no changes" }, 400);
+
+  // Auto-add status_change comment
+  if (body.status && body.status !== (oldTask as any).status) {
+    await addComment(id, body.changed_by ?? null, "status_change",
+      `Status changed: ${(oldTask as any).status} → ${body.status}`);
+  }
+
+  return c.json({ ok: true });
+});
+
+api.delete("/tasks/:id", async (c) => {
+  const id = parseInt(c.req.param("id"), 10);
+  const deleted = await deleteTask(id);
+  if (!deleted) return c.json({ error: "not found" }, 404);
+  return c.json({ ok: true });
+});
+
+api.get("/tasks/:id/comments", async (c) => {
+  const id = parseInt(c.req.param("id"), 10);
+  return c.json(await getCommentsByTask(id));
+});
+
+api.post("/tasks/:id/comments", async (c) => {
+  const taskId = parseInt(c.req.param("id"), 10);
+  const body = await c.req.json();
+  if (!body.content) return c.json({ error: "content required" }, 400);
+  const id = await addComment(
+    taskId,
+    body.author ?? null,
+    body.comment_type ?? "note",
+    body.content
+  );
+  return c.json({ ok: true, id }, 201);
 });
 
 api.get("/activities", async (c) => {
