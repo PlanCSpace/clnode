@@ -19,16 +19,11 @@ paths:
 - Lift state only when necessary — colocate state with its consumer
 
 ## Performance
-- Do NOT add manual memoization (useMemo, useCallback, React.memo) unless profiled
-- Use dynamic imports for heavy components: `lazy(() => import('./Heavy'))`
+- react-compiler is enabled — do NOT use useMemo, useCallback, React.memo
 - Avoid creating objects/arrays in JSX props (causes re-renders)
+- Use dynamic imports for heavy components: `lazy(() => import('./Heavy'))`
 
 ## Styling
 - Use Tailwind CSS utility classes
 - Extract repeated patterns to components, not CSS classes
 - Use `clsx` or `tailwind-merge` for conditional classes
-
-## Data Fetching
-- Use a data fetching library (TanStack Query, SWR) for server state
-- Keep form state local (React Hook Form or controlled inputs)
-- Separate server state from UI state
