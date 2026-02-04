@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { Hono } from "hono";
 import { startSession, endSession } from "../services/session.js";
 import { startAgent, stopAgent, getAgent } from "../services/agent.js";
@@ -7,6 +8,28 @@ import { logActivity } from "../services/activity.js";
 import { findProjectByPath, registerProject } from "../services/project.js";
 import { buildSmartContext, checkIncompleteTasks, buildPromptContext } from "../services/intelligence.js";
 import { broadcast } from "./ws.js";
+
+/** Extract the last assistant text from a Claude Code agent transcript JSONL */
+async function extractSummaryFromTranscript(transcriptPath: string): Promise<string | null> {
+  // Brief delay to let Claude Code finish writing the transcript
+  await new Promise(r => setTimeout(r, 500));
+  try {
+    const content = await readFile(transcriptPath, "utf-8");
+    const lines = content.trim().split("\n");
+    // Walk backwards to find the last assistant message with text content
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const entry = JSON.parse(lines[i]);
+      if (entry.type !== "assistant" || !entry.message?.content) continue;
+      const textParts = entry.message.content
+        .filter((c: { type: string }) => c.type === "text")
+        .map((c: { text: string }) => c.text);
+      if (textParts.length > 0) return textParts.join("\n");
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 const hooks = new Hono();
 
@@ -61,7 +84,11 @@ hooks.post("/:event", async (c) => {
       case "SubagentStop": {
         const agentId = body.agent_id ?? null;
         const agentTranscriptPath = body.agent_transcript_path ?? null;
-        const contextSummary = body.context_summary ?? body.result ?? null;
+        // Claude Code doesn't send context_summary — extract from transcript
+        let contextSummary = body.context_summary ?? body.result ?? null;
+        if (!contextSummary && agentTranscriptPath) {
+          contextSummary = await extractSummaryFromTranscript(agentTranscriptPath);
+        }
         if (agentId) {
           const agent = await getAgent(agentId);
           const agentName = agent?.agent_name ?? body.agent_type ?? "unknown";
