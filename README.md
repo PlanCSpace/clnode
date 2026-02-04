@@ -1,4 +1,5 @@
-# Claude Code Swarm Intelligence Plugin - clnode : your own dev team, running 24/7.
+# Claude Code Swarm Intelligence Plugin - clnode
+> your own dev team, running 24/7.
 
 ![Dashboard](docs/screenshots/01-dashboard.png)
 

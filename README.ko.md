@@ -1,4 +1,5 @@
-# Claude Code 스웜 인텔리전스 플러그인 - clnode : 나만의 개발팀, 24시간 가동.
+# Claude Code 스웜 인텔리전스 플러그인 - clnode
+> 나만의 개발팀, 24시간 가동.
 
 ![Dashboard](docs/screenshots/01-dashboard.png)
 
