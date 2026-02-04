@@ -144,4 +144,4 @@ templates/
 
 ## License
 
-MIT
+Source Available — free for non-commercial use. Commercial use requires a license. See [LICENSE](./LICENSE) for details.

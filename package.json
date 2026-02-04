@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Claude Code swarm intelligence plugin — shared memory for multi-agent coordination via hooks + DuckDB",
   "type": "module",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "keywords": [
     "claude-code",
     "swarm",
