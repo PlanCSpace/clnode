@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api, type Agent, type Session, formatDateTime, formatTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
+import { useProject } from "../lib/ProjectContext";
 import { Card } from "../components/Card";
 import { Badge, statusVariant } from "../components/Badge";
 import { AgentDetail } from "../components/AgentDetail";
@@ -13,21 +14,33 @@ export default function Agents() {
   const [filter, setFilter] = useState<Filter>("all");
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const { events, reconnectCount } = useWebSocket();
+  const { selected: projectId } = useProject();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const loadData = async () => {
-    const allSessions = await api.sessions();
-    setSessions(allSessions);
-    const map: Record<string, Agent[]> = {};
-    await Promise.all(
-      allSessions.map(async (s) => {
-        map[s.id] = await api.sessionAgents(s.id);
-      })
-    );
-    setAgentsBySession(map);
-  };
+  const loadData = useCallback(async () => {
+    try {
+      const allSessions = await api.sessions();
+      const filtered = projectId ? allSessions.filter(s => s.project_id === projectId) : allSessions;
+      setSessions(filtered);
+      const map: Record<string, Agent[]> = {};
+      await Promise.all(
+        filtered.map(async (s) => {
+          map[s.id] = await api.sessionAgents(s.id);
+        })
+      );
+      setAgentsBySession(map);
+    } catch {}
+  }, [projectId]);
 
-  useEffect(() => { loadData(); }, [reconnectCount]);
-  useEffect(() => { if (events.length > 0) loadData(); }, [events.length]);
+  useEffect(() => { loadData(); }, [loadData, reconnectCount]);
+
+  useEffect(() => {
+    if (events.length > 0) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(loadData, 500);
+    }
+    return () => clearTimeout(debounceRef.current);
+  }, [events.length, loadData]);
 
   const allAgents = Object.values(agentsBySession).flat();
   const totalCount = allAgents.length;
@@ -79,6 +92,18 @@ export default function Agents() {
                           <Badge variant={statusVariant(agent.status)} dot>{agent.status}</Badge>
                           {agent.agent_type && agent.agent_type !== agent.agent_name && (
                             <span className="text-xs text-zinc-500">[{agent.agent_type}]</span>
+                          )}
+                          {agent.status === "active" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                api.killAgent(agent.id).then(loadData).catch(() => {});
+                              }}
+                              className="ml-auto px-2 py-0.5 text-[10px] rounded-lg bg-red-900/40 text-red-400 hover:bg-red-900/70 transition-colors"
+                              title="Kill agent"
+                            >
+                              Kill
+                            </button>
                           )}
                         </div>
                         <div className="text-xs text-zinc-500 mt-1 flex gap-3">

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { api, type Task, type TaskComment, formatDateTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
+import { useProject } from "../lib/ProjectContext";
 
 const COLUMNS = [
   { key: "idea", label: "Idea", color: "purple" },
@@ -67,10 +68,11 @@ export default function Tasks() {
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
   const { events } = useWebSocket();
+  const { selected: projectId } = useProject();
 
   const reload = useCallback(() => {
-    api.tasks().then(setTasks);
-  }, []);
+    api.tasks(projectId ?? undefined).then(setTasks).catch(() => {});
+  }, [projectId]);
 
   useEffect(() => { reload(); }, [reload]);
 

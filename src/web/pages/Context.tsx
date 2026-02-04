@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type ContextEntry, type Session, formatDateTime } from "../lib/api";
+import { useProject } from "../lib/ProjectContext";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 
@@ -8,17 +9,20 @@ export default function Context() {
   const [selectedSession, setSelectedSession] = useState<string>("");
   const [entries, setEntries] = useState<ContextEntry[]>([]);
   const [search, setSearch] = useState("");
+  const { selected: projectId } = useProject();
 
   useEffect(() => {
     api.sessions().then((s) => {
-      setSessions(s);
-      if (s.length > 0) setSelectedSession(s[0].id);
-    });
-  }, []);
+      const filtered = projectId ? s.filter(ss => ss.project_id === projectId) : s;
+      setSessions(filtered);
+      if (filtered.length > 0) setSelectedSession(filtered[0].id);
+      else { setSelectedSession(""); setEntries([]); }
+    }).catch(() => {});
+  }, [projectId]);
 
   useEffect(() => {
     if (selectedSession) {
-      api.sessionContext(selectedSession).then(setEntries);
+      api.sessionContext(selectedSession).then(setEntries).catch(() => {});
     }
   }, [selectedSession]);
 

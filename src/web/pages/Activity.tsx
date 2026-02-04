@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { api, type Activity as ActivityType, type FileChange, formatTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
 import { Badge, type Variant } from "../components/Badge";
@@ -15,16 +15,21 @@ export default function Activity() {
   const [subagentOnly, setSubagentOnly] = useState(false);
   const [tab, setTab] = useState<"log" | "files">("log");
   const { events, connected } = useWebSocket();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  useEffect(() => {
-    api.activities(100).then(setActivities);
+  const loadActivities = useCallback(() => {
+    api.activities(100).then(setActivities).catch(() => {});
   }, []);
+
+  useEffect(() => { loadActivities(); }, [loadActivities]);
 
   useEffect(() => {
     if (events.length > 0) {
-      api.activities(100).then(setActivities);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(loadActivities, 500);
     }
-  }, [events.length]);
+    return () => clearTimeout(debounceRef.current);
+  }, [events.length, loadActivities]);
 
   const loadFiles = (sessionId: string) => {
     api.sessionFiles(sessionId).then(setFiles);

@@ -1,31 +1,33 @@
 const BASE = "/api";
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  const res = await fetch(input, init);
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
   return res.json() as Promise<T>;
 }
 
+async function get<T>(path: string): Promise<T> {
+  return request<T>(`${BASE}${path}`);
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  return request<T>(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return res.json() as Promise<T>;
 }
 
 async function patch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  return request<T>(`${BASE}${path}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return res.json() as Promise<T>;
 }
 
 async function del<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { method: "DELETE" });
-  return res.json() as Promise<T>;
+  return request<T>(`${BASE}${path}`, { method: "DELETE" });
 }
 
 export interface Project {
@@ -145,6 +147,7 @@ export const api = {
   agentContext: (id: string) => get<ContextEntry[]>(`/agents/${id}/context`),
   agentFiles: (id: string) => get<FileChange[]>(`/agents/${id}/files`),
   agent: (id: string) => get<Agent>(`/agents/${id}`),
+  killAgent: (id: string) => patch<{ ok: boolean }>(`/agents/${id}`, { status: "completed", context_summary: "Manually killed via UI" }),
   tasks: (projectId?: string) => get<Task[]>(`/tasks${projectId ? `?project_id=${projectId}` : ""}`),
   task: (id: number) => get<Task>(`/tasks/${id}`),
   createTask: (data: { project_id?: string; title: string; description?: string; assigned_to?: string; status?: string; tags?: string[] }) =>

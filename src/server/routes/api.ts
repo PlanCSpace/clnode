@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getAllSessions, getActiveSessions, getSession, getTotalSessionsCount, getActiveSessionsCount } from "../services/session.js";
-import { getAllAgents, getActiveAgents, getAgentsBySession, getAgent, getTotalAgentsCount, getActiveAgentsCount, deleteAgent } from "../services/agent.js";
+import { getAllAgents, getActiveAgents, getAgentsBySession, getAgent, stopAgent, getTotalAgentsCount, getActiveAgentsCount, deleteAgent } from "../services/agent.js";
 import { getContextBySession, getContextByAgent, getTotalContextEntriesCount, deleteContextByType } from "../services/context.js";
 import { getFileChangesBySession, getFileChangesByAgent, getTotalFileChangesCount } from "../services/filechange.js";
 import { getAllTasks, getTasksByProject, getTask, createTask, updateTask, deleteTask } from "../services/task.js";
@@ -53,6 +53,17 @@ api.get("/agents/:id/context", async (c) => {
 
 api.get("/agents/:id/files", async (c) => {
   return c.json(await getFileChangesByAgent(c.req.param("id")));
+});
+
+api.patch("/agents/:id", async (c) => {
+  const id = c.req.param("id");
+  const agent = await getAgent(id);
+  if (!agent) return c.json({ error: "not found" }, 404);
+  const body = await c.req.json();
+  if (body.status === "completed") {
+    await stopAgent(id, body.context_summary ?? "Manually stopped via UI");
+  }
+  return c.json({ ok: true });
 });
 
 api.delete("/agents/:id", async (c) => {

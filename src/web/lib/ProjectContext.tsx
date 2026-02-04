@@ -18,7 +18,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
-    api.projects().then(setProjects);
+    api.projects().then(setProjects).catch(() => {});
   }, []);
 
   return (

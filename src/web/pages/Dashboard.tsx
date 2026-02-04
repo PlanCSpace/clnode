@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { api, type Session, type Agent, type Activity, type Task, type Stats, formatTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
+import { useProject } from "../lib/ProjectContext";
 import { Card } from "../components/Card";
 import { Badge, type Variant } from "../components/Badge";
 import { BarChart } from "../components/Chart";
@@ -14,27 +15,38 @@ export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const { connected, events, reconnectCount } = useWebSocket();
+  const { selected: projectId } = useProject();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     Promise.all([
       api.sessions(true),
       api.agents(true),
       api.agents(),
       api.activities(50),
       api.stats(),
-      api.tasks(),
+      api.tasks(projectId ?? undefined),
     ]).then(([s, a, allA, act, st, t]) => {
-      setSessions(s);
-      setAgents(a);
+      const filterByProject = <T extends { session_id?: string; project_id?: string | null }>(items: T[]) =>
+        projectId ? items.filter(i => i.project_id === projectId) : items;
+      setSessions(filterByProject(s));
+      setAgents(filterByProject(a as (Agent & { project_id?: string | null })[]));
       setAllAgents(allA);
       setActivities(act);
       setStats(st);
       setTasks(t);
-    });
-  };
+    }).catch(() => {});
+  }, [projectId]);
 
-  useEffect(() => { loadData(); }, [reconnectCount]);
-  useEffect(() => { if (events.length > 0) loadData(); }, [events.length]);
+  useEffect(() => { loadData(); }, [loadData, reconnectCount]);
+
+  useEffect(() => {
+    if (events.length > 0) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(loadData, 500);
+    }
+    return () => clearTimeout(debounceRef.current);
+  }, [events.length, loadData]);
 
   const agentTypeCounts = allAgents.reduce<Record<string, number>>((acc, a) => {
     const type = a.agent_type || a.agent_name || "unknown";
@@ -72,7 +84,7 @@ export default function Dashboard() {
     { label: "Context Entries", value: stats?.total_context_entries ?? 0, icon: RiDatabase2Line },
     { label: "File Changes", value: stats?.total_file_changes ?? 0, icon: RiFileEditLine },
     { label: "Live Events", value: events.length, icon: RiPulseLine },
-    { label: "Tasks", value: tasks.length, icon: RiTaskLine, sub: "all projects" },
+    { label: "Tasks", value: tasks.length, icon: RiTaskLine, sub: projectId ? "this project" : "all projects" },
   ];
 
   return (

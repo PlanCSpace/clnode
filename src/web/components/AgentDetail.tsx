@@ -23,11 +23,11 @@ export function AgentDetail({ agent }: { agent: Agent }) {
   useEffect(() => {
     if (tab === "context" && !loadedContext) {
       setLoading(true);
-      api.agentContext(agent.id).then(c => { setContext(c); setLoadedContext(true); setLoading(false); });
+      api.agentContext(agent.id).then(c => { setContext(c); setLoadedContext(true); setLoading(false); }).catch(() => setLoading(false));
     }
     if (tab === "files" && !loadedFiles) {
       setLoading(true);
-      api.agentFiles(agent.id).then(f => { setFiles(f); setLoadedFiles(true); setLoading(false); });
+      api.agentFiles(agent.id).then(f => { setFiles(f); setLoadedFiles(true); setLoading(false); }).catch(() => setLoading(false));
     }
   }, [tab, agent.id, loadedContext, loadedFiles]);
 
