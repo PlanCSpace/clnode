@@ -33,5 +33,5 @@ export async function getFileChangesByAgent(agentId: string) {
 export async function getTotalFileChangesCount() {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM file_changes`);
-  return result[0]?.count || 0;
+  return Number(result[0]?.count ?? 0);
 }

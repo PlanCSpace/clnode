@@ -67,5 +67,5 @@ export async function getCrossSessionContext(sessionId: string, limit: number = 
 export async function getTotalContextEntriesCount() {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM context_entries`);
-  return result[0]?.count || 0;
+  return Number(result[0]?.count ?? 0);
 }
