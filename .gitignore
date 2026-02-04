@@ -6,3 +6,4 @@ data/*.duckdb.wal
 .DS_Store
 .env
 .idea/
+.claude/settings.local.json

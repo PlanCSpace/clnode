@@ -1,42 +1,42 @@
 # clnode — Claude Code Hook Monitoring Daemon
 
-## 프로젝트 개요
-Claude Code의 hook 이벤트를 수집·저장·모니터링하는 데몬 서비스.
-Hono 서버 + DuckDB + WebSocket 실시간 브로드캐스트 구조.
+## Overview
+A daemon service that collects, stores, and monitors Claude Code hook events.
+Architecture: Hono server + DuckDB + WebSocket real-time broadcast.
 
-## 기술 스택
+## Tech Stack
 - **Runtime**: Node.js v22, TypeScript, ESM (type: module)
 - **Server**: Hono + @hono/node-server + @hono/node-ws
 - **DB**: DuckDB (duckdb-async) — `data/clnode.duckdb`
 - **CLI**: commander.js
 - **Package Manager**: pnpm
 
-## 디렉토리 구조
+## Directory Structure
 ```
 src/
-  cli/index.ts          — CLI 진입점 (clnode start/stop/init/status/ui)
-  hooks/hook.sh         — curl 기반 범용 hook 스크립트
+  cli/index.ts          — CLI entry point (clnode start/stop/init/status/ui)
+  hooks/hook.sh         — curl-based universal hook script
   server/
-    index.ts            — Hono 서버 진입점 (port 3100)
-    db.ts               — DuckDB 연결 + 스키마 초기화
+    index.ts            — Hono server entry point (port 3100)
+    db.ts               — DuckDB connection + schema initialization
     routes/
-      hooks.ts          — POST /hooks/:event (7개 이벤트 핸들러)
+      hooks.ts          — POST /hooks/:event (7 event handlers)
       api.ts            — GET /api/* (REST API)
-      ws.ts             — WebSocket 브로드캐스트 유틸
+      ws.ts             — WebSocket broadcast utility
     services/
-      session.ts        — 세션 CRUD
-      agent.ts          — 에이전트 생명주기
-      task.ts           — 태스크 상태
-      activity.ts       — 활동 로그
-      context.ts        — 컨텍스트 저장/검색
-      event.ts          — 원시 이벤트 저장
-      tooluse.ts        — 도구 사용 기록
+      session.ts        — Session CRUD
+      agent.ts          — Agent lifecycle
+      task.ts           — Task state tracking
+      activity.ts       — Activity log
+      context.ts        — Context storage/retrieval
+      event.ts          — Raw event storage
+      tooluse.ts        — Tool usage records
 templates/
-  hooks-config.json     — clnode init이 설치할 hooks 설정 템플릿
-data/                   — DuckDB 파일 저장 디렉토리 (gitignore)
+  hooks-config.json     — Hooks config template installed by `clnode init`
+data/                   — DuckDB file storage (gitignored)
 ```
 
-## DuckDB 스키마 (7개 테이블)
+## DuckDB Schema (7 tables)
 - **sessions**: session_id, project_path, started_at, ended_at, status
 - **agents**: agent_id, session_id, parent_agent_id, agent_type, model, started_at, ended_at, status
 - **tasks**: task_id, agent_id, session_id, description, status, created_at, updated_at
@@ -45,63 +45,63 @@ data/                   — DuckDB 파일 저장 디렉토리 (gitignore)
 - **contexts**: id(seq), session_id, agent_id, key, value, created_at
 - **events**: id(seq), session_id, event_type, payload, received_at
 
-## Hook 이벤트 (POST /hooks/:event)
+## Hook Events (POST /hooks/:event)
 SessionStart, SessionEnd, SubagentStart, SubagentStop, PostToolUse, Stop, UserPromptSubmit
 
-## 주요 명령어
+## Commands
 ```bash
-pnpm dev          # tsx로 개발 서버 실행
-pnpm build        # TypeScript 빌드
-pnpm start        # 빌드된 서버 실행
-pnpm dev:cli      # CLI 개발 모드
+pnpm dev          # Dev server with tsx
+pnpm build        # TypeScript build
+pnpm start        # Run built server
+pnpm dev:cli      # CLI dev mode
 ```
 
-## CLI 사용법
+## CLI Usage
 ```bash
-clnode start      # 데몬 시작 (백그라운드)
-clnode stop       # 데몬 중지
-clnode status     # 활성 세션/에이전트 표시
-clnode init [path]# 대상 프로젝트에 hooks 설정 설치
-clnode ui         # 브라우저에서 Web UI 열기
+clnode start       # Start daemon (background)
+clnode stop        # Stop daemon
+clnode status      # Show active sessions/agents
+clnode init [path] # Install hooks config to target project
+clnode ui          # Open Web UI in browser
 ```
 
-## API 엔드포인트
-- `GET /` — 서버 정보
-- `GET /ws` — WebSocket 실시간 이벤트
-- `GET /api/health` — 헬스체크
-- `GET /api/sessions[?active=true]` — 세션 목록
-- `GET /api/sessions/:id` — 세션 상세
-- `GET /api/sessions/:id/agents` — 세션별 에이전트
-- `GET /api/sessions/:id/tasks` — 세션별 태스크
-- `GET /api/sessions/:id/activities` — 세션별 활동
-- `GET /api/sessions/:id/events` — 세션별 이벤트
-- `GET /api/sessions/:id/tools` — 세션별 도구 사용
-- `GET /api/agents[?active=true]` — 에이전트 목록
-- `GET /api/activities[?limit=50]` — 최근 활동
-- `GET /api/events[?limit=100]` — 최근 이벤트
-- `GET /api/tools[?limit=50]` — 최근 도구 사용
+## API Endpoints
+- `GET /` — Server info
+- `GET /ws` — WebSocket real-time events
+- `GET /api/health` — Health check
+- `GET /api/sessions[?active=true]` — Session list
+- `GET /api/sessions/:id` — Session detail
+- `GET /api/sessions/:id/agents` — Agents by session
+- `GET /api/sessions/:id/tasks` — Tasks by session
+- `GET /api/sessions/:id/activities` — Activities by session
+- `GET /api/sessions/:id/events` — Events by session
+- `GET /api/sessions/:id/tools` — Tool uses by session
+- `GET /api/agents[?active=true]` — Agent list
+- `GET /api/activities[?limit=50]` — Recent activities
+- `GET /api/events[?limit=100]` — Recent events
+- `GET /api/tools[?limit=50]` — Recent tool uses
 
-## 주의사항
-- DuckDB에서 DEFAULT나 UPDATE에 `current_timestamp` 대신 `now()` 사용
-- hook.sh는 실패해도 Claude Code를 블로킹하지 않음 (curl --max-time 2, || true)
-- 서버 포트: 환경변수 CLNODE_PORT (기본 3100)
+## Important Notes
+- Use `now()` instead of `current_timestamp` in DuckDB DEFAULT and UPDATE clauses
+- hook.sh never blocks Claude Code on failure (curl --max-time 2, || true)
+- Server port: env var CLNODE_PORT (default 3100)
 
-## Phase 1 상태: ✅ 완료
-- [x] 프로젝트 초기화 (package.json, tsconfig, .gitignore)
-- [x] DuckDB 스키마 7개 테이블
-- [x] Hono 서버 + WebSocket
-- [x] Hook 이벤트 핸들러 (7개 이벤트)
+## Phase 1 Status: Complete
+- [x] Project init (package.json, tsconfig, .gitignore)
+- [x] DuckDB schema (7 tables)
+- [x] Hono server + WebSocket
+- [x] Hook event handlers (7 events)
 - [x] REST API
-- [x] 서비스 레이어 (7개 서비스)
-- [x] hook.sh 스크립트
+- [x] Service layer (7 services)
+- [x] hook.sh script
 - [x] CLI (start/stop/status/init/ui)
-- [x] Hook 설정 템플릿
-- [x] 빌드 성공 확인
-- [x] 서버 기동 + curl 테스트 통과
+- [x] Hook config template
+- [x] Build verified
+- [x] Server boot + curl test passed
 
-## 다음 단계 (Phase 2 후보)
-- Web UI (React/SolidJS) — src/web/
-- 대시보드 페이지
-- 에이전트 트리 시각화
-- 실시간 WebSocket 업데이트 UI
-- 세션 타임라인 뷰
+## Next Steps (Phase 2 Candidates)
+- Web UI (React/Solid) — src/web/
+- Dashboard page
+- Agent tree visualization
+- Real-time WebSocket update UI
+- Session timeline view
