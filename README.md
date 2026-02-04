@@ -18,9 +18,10 @@ Leader           → stays lean, only makes high-level decisions
 
 ### What makes this work
 
-- **`additionalContext` injection** via the official hook protocol — not a hack, a proper extension
-- **DuckDB as an agent mailbox** — agents don't talk directly, they talk through time
-- **Leader context stays clean** — the #1 bottleneck in multi-agent systems, solved by externalizing coordination state to DB
+- **`additionalContext` injection via the official hook protocol** — Claude Code's `SubagentStart` hook allows returning `additionalContext` in stdout. clnode uses this to inject previous agents' results into new agents. Not a hack — a proper extension of the documented protocol.
+- **DuckDB as an agent mailbox** — agents don't talk to each other directly. Agent A finishes and leaves a summary in DB. Agent B starts later and receives it automatically. They communicate through time, not through the Leader.
+- **Leader context stays clean** — in vanilla Claude Code, every review cycle ("review failed → tell Leader → Leader re-assigns → implementer fixes → send back") piles context onto the Leader until it hits limits. clnode externalizes this coordination state to DB, so the Leader only makes high-level decisions.
+- **Zero lock-in** — clnode uses only hooks and skills, both official Claude Code features. Remove the plugin and your project works exactly as before.
 
 ## Quick Start
 
