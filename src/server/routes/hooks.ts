@@ -39,9 +39,8 @@ hooks.post("/:event", async (c) => {
 
       case "SubagentStart": {
         const agentId = body.agent_id ?? crypto.randomUUID();
-        const toolInput = body.tool_input ?? {};
-        const agentName = toolInput.subagent_type ?? toolInput.name ?? "unknown";
-        const agentType = toolInput.subagent_type ?? null;
+        const agentType = body.agent_type ?? null;
+        const agentName = agentType ?? "unknown";
         const parentAgentId = body.parent_agent_id ?? null;
 
         await startAgent(agentId, sessionId, agentName, agentType, parentAgentId);
@@ -61,14 +60,19 @@ hooks.post("/:event", async (c) => {
 
       case "SubagentStop": {
         const agentId = body.agent_id ?? null;
+        const agentTranscriptPath = body.agent_transcript_path ?? null;
         const contextSummary = body.context_summary ?? body.result ?? null;
         if (agentId) {
           const agent = await getAgent(agentId);
-          const agentName = agent?.agent_name ?? "unknown";
+          const agentName = agent?.agent_name ?? body.agent_type ?? "unknown";
 
           await stopAgent(agentId, contextSummary);
           if (contextSummary) {
             await addContextEntry(sessionId, agentId, "agent_summary", contextSummary, ["auto", agentName]);
+          }
+          // Store transcript path as context entry for future reference
+          if (agentTranscriptPath) {
+            await addContextEntry(sessionId, agentId, "transcript_path", agentTranscriptPath, ["auto", agentName]);
           }
 
           // Phase 3: Todo Enforcer — check incomplete tasks

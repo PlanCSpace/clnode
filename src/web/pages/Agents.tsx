@@ -1,20 +1,37 @@
 import { useEffect, useState } from "react";
-import { api, type Agent } from "../lib/api";
+import { api, type Agent, type Session, formatDateTime, formatTime } from "../lib/api";
+import { useWebSocket } from "../lib/useWebSocket";
 
 type Filter = "all" | "active" | "completed";
 
 export default function Agents() {
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [agentsBySession, setAgentsBySession] = useState<Record<string, Agent[]>>({});
   const [filter, setFilter] = useState<Filter>("all");
+  const { events, reconnectCount } = useWebSocket();
 
-  useEffect(() => {
-    api.agents().then(setAgents);
-  }, []);
+  const loadData = async () => {
+    const allSessions = await api.sessions();
+    setSessions(allSessions);
+    const map: Record<string, Agent[]> = {};
+    await Promise.all(
+      allSessions.map(async (s) => {
+        map[s.id] = await api.sessionAgents(s.id);
+      })
+    );
+    setAgentsBySession(map);
+  };
 
-  const roots = agents.filter((a) => !a.parent_agent_id);
-  const childrenOf = (parentId: string) => agents.filter((a) => a.parent_agent_id === parentId);
+  useEffect(() => { loadData(); }, [reconnectCount]);
+  useEffect(() => { if (events.length > 0) loadData(); }, [events.length]);
 
-  const filtered = filter === "all" ? roots : roots.filter((a) => a.status === filter);
+  const allAgents = Object.values(agentsBySession).flat();
+  const totalCount = allAgents.length;
+
+  const filterAgents = (agents: Agent[]) =>
+    filter === "all" ? agents : agents.filter((a) => a.status === filter);
+
+  const visibleSessions = sessions.filter((s) => filterAgents(agentsBySession[s.id] ?? []).length > 0);
 
   return (
     <div className="space-y-6">
@@ -31,51 +48,65 @@ export default function Agents() {
             </button>
           ))}
         </div>
-        <span className="text-xs text-gray-500">{agents.length} total</span>
+        <span className="text-xs text-gray-500">{totalCount} agents</span>
       </div>
 
-      <div className="space-y-3">
-        {filtered.length === 0 && <p className="text-gray-600 text-sm">No agents found</p>}
-        {filtered.map((agent) => (
-          <AgentNode key={agent.id} agent={agent} childrenOf={childrenOf} depth={0} />
-        ))}
+      <div className="space-y-4">
+        {visibleSessions.length === 0 && <p className="text-gray-600 text-sm">No agents found</p>}
+        {visibleSessions.map((session) => {
+          const agents = filterAgents(agentsBySession[session.id] ?? []);
+          return (
+            <div key={session.id} className="space-y-1">
+              <div className="flex items-center gap-2 px-1">
+                <span className={`w-2 h-2 rounded-full ${session.status === "active" ? "bg-green-500" : "bg-gray-600"}`} />
+                <span className="text-xs font-mono text-gray-400">
+                  {session.id.slice(0, 12)}
+                </span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                  session.status === "active" ? "bg-green-900 text-green-300" : "bg-gray-800 text-gray-400"
+                }`}>
+                  {session.status}
+                </span>
+                {session.project_id && (
+                  <span className="text-xs text-gray-500">{session.project_id}</span>
+                )}
+                <span className="text-xs text-gray-600">
+                  {formatDateTime(session.started_at)}
+                </span>
+              </div>
+              {agents.map((agent, i) => (
+                <AgentCard key={agent.id} agent={agent} isLast={i === agents.length - 1} />
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function AgentNode({
-  agent,
-  childrenOf,
-  depth,
-}: {
-  agent: Agent;
-  childrenOf: (id: string) => Agent[];
-  depth: number;
-}) {
-  const children = childrenOf(agent.id);
+function AgentCard({ agent, isLast }: { agent: Agent; isLast: boolean }) {
   const statusColor = agent.status === "active"
     ? "bg-green-900 text-green-300"
     : "bg-gray-800 text-gray-400";
 
   return (
-    <div style={{ marginLeft: depth * 24 }}>
-      <div className="bg-gray-900 border border-gray-800 rounded p-3">
+    <div className="flex items-start gap-2 ml-3">
+      <span className="text-gray-400 text-sm mt-2.5 shrink-0">{isLast ? "└─" : "├─"}</span>
+      <div className="bg-gray-900 border border-gray-800 rounded p-3 flex-1">
         <div className="flex items-center gap-2">
-          {depth > 0 && <span className="text-gray-600 text-xs">└─</span>}
           <span className="font-mono text-sm text-white">{agent.agent_name}</span>
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColor}`}>
             {agent.status}
           </span>
-          {agent.agent_type && (
+          {agent.agent_type && agent.agent_type !== agent.agent_name && (
             <span className="text-xs text-gray-500">[{agent.agent_type}]</span>
           )}
         </div>
         <div className="text-xs text-gray-500 mt-1 flex gap-3">
           <span>id: {agent.id.slice(0, 12)}</span>
-          <span>session: {agent.session_id.slice(0, 12)}</span>
           {agent.completed_at && (
-            <span>completed: {new Date(agent.completed_at).toLocaleTimeString()}</span>
+            <span>completed: {formatTime(agent.completed_at)}</span>
           )}
         </div>
         {agent.context_summary && (
@@ -84,9 +115,6 @@ function AgentNode({
           </div>
         )}
       </div>
-      {children.map((child) => (
-        <AgentNode key={child.id} agent={child} childrenOf={childrenOf} depth={depth + 1} />
-      ))}
     </div>
   );
 }

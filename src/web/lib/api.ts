@@ -71,6 +71,25 @@ export interface Activity {
   created_at: string;
 }
 
+/** DuckDB now() stores local time but JSON serializes with 'Z' suffix.
+ *  Strip 'Z' so JS treats it as local time, not UTC. */
+export function localDate(ts: string | null): Date | null {
+  if (!ts) return null;
+  return new Date(ts.replace(/Z$/, ""));
+}
+
+export function formatDateTime(ts: string | null): string {
+  const d = localDate(ts);
+  if (!d) return "—";
+  return d.toLocaleString();
+}
+
+export function formatTime(ts: string | null): string {
+  const d = localDate(ts);
+  if (!d) return "—";
+  return d.toLocaleTimeString();
+}
+
 export const api = {
   health: () => get<{ status: string; uptime: number }>("/health"),
   projects: () => get<Project[]>("/projects"),

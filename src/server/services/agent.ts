@@ -59,3 +59,11 @@ export async function getActiveAgentsCount() {
   const result = await db.all(`SELECT COUNT(*) as count FROM agents WHERE status = 'active'`);
   return result[0]?.count || 0;
 }
+
+export async function deleteAgent(id: string): Promise<void> {
+  const db = await getDb();
+  await db.run(`DELETE FROM activity_log WHERE agent_id = ?`, id);
+  await db.run(`DELETE FROM context_entries WHERE agent_id = ?`, id);
+  await db.run(`DELETE FROM file_changes WHERE agent_id = ?`, id);
+  await db.run(`DELETE FROM agents WHERE id = ?`, id);
+}

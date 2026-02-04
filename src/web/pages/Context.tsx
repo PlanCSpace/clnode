@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type ContextEntry, type Session } from "../lib/api";
+import { api, type ContextEntry, type Session, formatDateTime } from "../lib/api";
 
 export default function Context() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -69,7 +69,7 @@ export default function Context() {
                 </span>
               ))}
               <span className="text-xs text-gray-600 ml-auto">
-                {new Date(entry.created_at).toLocaleString()}
+                {formatDateTime(entry.created_at)}
               </span>
             </div>
             <div className="text-sm text-gray-200 whitespace-pre-wrap">{entry.content}</div>

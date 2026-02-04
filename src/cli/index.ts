@@ -145,7 +145,7 @@ program
     console.log(`[clnode] Hooks installed to ${settingsPath}`);
     console.log(`[clnode] hook.sh path: ${hookScript}`);
 
-    // Copy skill templates if requested
+    // Copy skill and agent templates if requested
     if (opts.withSkills) {
       const skillsSourceDir = path.resolve(baseDir, "../../templates/skills");
       const skillsTargetDir = path.join(claudeDir, "skills");
@@ -161,6 +161,38 @@ program
           }
         }
         console.log(`[clnode] ${skillFiles.length} skill templates installed to ${skillsTargetDir}`);
+      }
+
+      const agentsSourceDir = path.resolve(baseDir, "../../templates/agents");
+      const agentsTargetDir = path.join(claudeDir, "agents");
+
+      if (fs.existsSync(agentsSourceDir)) {
+        fs.mkdirSync(agentsTargetDir, { recursive: true });
+        const agentFiles = fs.readdirSync(agentsSourceDir).filter((f: string) => f.endsWith(".md"));
+        for (const file of agentFiles) {
+          const dest = path.join(agentsTargetDir, file);
+          if (!fs.existsSync(dest)) {
+            fs.copyFileSync(path.join(agentsSourceDir, file), dest);
+            console.log(`[clnode] Agent template copied: ${file}`);
+          }
+        }
+        console.log(`[clnode] ${agentFiles.length} agent templates installed to ${agentsTargetDir}`);
+      }
+
+      const rulesSourceDir = path.resolve(baseDir, "../../templates/rules");
+      const rulesTargetDir = path.join(claudeDir, "rules");
+
+      if (fs.existsSync(rulesSourceDir)) {
+        fs.mkdirSync(rulesTargetDir, { recursive: true });
+        const rulesFiles = fs.readdirSync(rulesSourceDir).filter((f: string) => f.endsWith(".md"));
+        for (const file of rulesFiles) {
+          const dest = path.join(rulesTargetDir, file);
+          if (!fs.existsSync(dest)) {
+            fs.copyFileSync(path.join(rulesSourceDir, file), dest);
+            console.log(`[clnode] Rule template copied: ${file}`);
+          }
+        }
+        console.log(`[clnode] ${rulesFiles.length} rule templates installed to ${rulesTargetDir}`);
       }
     }
 

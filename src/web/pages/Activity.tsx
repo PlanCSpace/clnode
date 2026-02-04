@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type Activity as ActivityType, type FileChange } from "../lib/api";
+import { api, type Activity as ActivityType, type FileChange, formatTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
 
 const EVENT_TYPES = [
@@ -11,6 +11,7 @@ export default function Activity() {
   const [activities, setActivities] = useState<ActivityType[]>([]);
   const [files, setFiles] = useState<FileChange[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [subagentOnly, setSubagentOnly] = useState(false);
   const [tab, setTab] = useState<"log" | "files">("log");
   const { events, connected } = useWebSocket();
 
@@ -28,9 +29,9 @@ export default function Activity() {
     api.sessionFiles(sessionId).then(setFiles);
   };
 
-  const filtered = typeFilter
-    ? activities.filter((a) => a.event_type === typeFilter)
-    : activities;
+  const filtered = activities
+    .filter((a) => !typeFilter || a.event_type === typeFilter)
+    .filter((a) => !subagentOnly || a.agent_id != null);
 
   return (
     <div className="space-y-6">
@@ -55,16 +56,24 @@ export default function Activity() {
           File Changes
         </button>
         {tab === "log" && (
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-white ml-auto"
-          >
-            <option value="">All events</option>
-            {EVENT_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+          <>
+            <button
+              onClick={() => setSubagentOnly(!subagentOnly)}
+              className={`px-3 py-1 rounded text-xs ml-auto ${subagentOnly ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400"}`}
+            >
+              Subagent Only
+            </button>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+            >
+              <option value="">All events</option>
+              {EVENT_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </>
         )}
       </div>
 
@@ -77,7 +86,7 @@ export default function Activity() {
             return (
               <div key={a.id} className="flex items-start gap-2 text-xs py-1.5 border-b border-gray-900">
                 <span className="text-gray-600 w-20 shrink-0">
-                  {new Date(a.created_at).toLocaleTimeString()}
+                  {formatTime(a.created_at)}
                 </span>
                 <EventBadge type={a.event_type} />
                 <span className="text-gray-400 font-mono w-20 shrink-0">
@@ -109,7 +118,7 @@ export default function Activity() {
             {files.map((f) => (
               <div key={f.id} className="flex items-center gap-2 text-xs py-1.5 border-b border-gray-900">
                 <span className="text-gray-600 w-20 shrink-0">
-                  {new Date(f.created_at).toLocaleTimeString()}
+                  {formatTime(f.created_at)}
                 </span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                   f.change_type === "create" ? "bg-green-900 text-green-300" : "bg-yellow-900 text-yellow-300"

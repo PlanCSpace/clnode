@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type Task } from "../lib/api";
+import { api, type Task, formatDateTime } from "../lib/api";
 
 const COLUMNS = ["pending", "in_progress", "completed"] as const;
 
@@ -38,7 +38,7 @@ export default function Tasks() {
                         {task.assigned_to}
                       </span>
                     )}
-                    <span className="ml-auto">{new Date(task.updated_at).toLocaleDateString()}</span>
+                    <span className="ml-auto">{formatDateTime(task.updated_at)}</span>
                   </div>
                 </div>
               ))}

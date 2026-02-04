@@ -9,6 +9,7 @@ export interface WsEvent {
 export function useWebSocket() {
   const [events, setEvents] = useState<WsEvent[]>([]);
   const [connected, setConnected] = useState(false);
+  const [reconnectCount, setReconnectCount] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -17,7 +18,10 @@ export function useWebSocket() {
     const ws = new WebSocket(`${protocol}//${location.host}/ws`);
     wsRef.current = ws;
 
-    ws.onopen = () => setConnected(true);
+    ws.onopen = () => {
+      setConnected(true);
+      setReconnectCount((c) => c + 1);
+    };
     ws.onclose = () => {
       setConnected(false);
       reconnectRef.current = setTimeout(connect, 3000);
@@ -40,5 +44,5 @@ export function useWebSocket() {
 
   const clearEvents = useCallback(() => setEvents([]), []);
 
-  return { events, connected, clearEvents };
+  return { events, connected, reconnectCount, clearEvents };
 }
