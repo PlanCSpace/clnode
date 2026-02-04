@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { startSession, endSession } from "../services/session.js";
 import { startAgent, stopAgent, getAgent } from "../services/agent.js";
-import { addContextEntry, getRecentContext } from "../services/context.js";
+import { addContextEntry } from "../services/context.js";
 import { recordFileChange } from "../services/filechange.js";
 import { logActivity } from "../services/activity.js";
 import { findProjectByPath, registerProject } from "../services/project.js";
+import { buildSmartContext, checkIncompleteTasks, buildPromptContext } from "../services/intelligence.js";
 import { broadcast } from "./ws.js";
 
 const hooks = new Hono();
@@ -47,12 +48,8 @@ hooks.post("/:event", async (c) => {
         await logActivity(sessionId, agentId, "SubagentStart", { agent_name: agentName, agent_type: agentType });
         broadcast("SubagentStart", { session_id: sessionId, agent_id: agentId, agent_name: agentName });
 
-        const contextEntries = await getRecentContext(sessionId, 10);
-        let additionalContext = "";
-        if (contextEntries.length > 0) {
-          const summaries = contextEntries.map((e: Record<string, unknown>) => e.content);
-          additionalContext = `[clnode context]\n${summaries.join("\n")}`;
-        }
+        // Phase 3: Smart context injection
+        const additionalContext = await buildSmartContext(sessionId, agentName, agentType, parentAgentId);
 
         return c.json({
           hookSpecificOutput: {
@@ -66,12 +63,25 @@ hooks.post("/:event", async (c) => {
         const agentId = body.agent_id ?? null;
         const contextSummary = body.context_summary ?? body.result ?? null;
         if (agentId) {
+          const agent = await getAgent(agentId);
+          const agentName = agent?.agent_name ?? "unknown";
+
           await stopAgent(agentId, contextSummary);
           if (contextSummary) {
-            await addContextEntry(sessionId, agentId, "agent_summary", contextSummary, ["auto"]);
+            await addContextEntry(sessionId, agentId, "agent_summary", contextSummary, ["auto", agentName]);
           }
-          await logActivity(sessionId, agentId, "SubagentStop", { context_summary: contextSummary });
-          broadcast("SubagentStop", { session_id: sessionId, agent_id: agentId });
+
+          // Phase 3: Todo Enforcer — check incomplete tasks
+          const warning = await checkIncompleteTasks(sessionId, agentId, agentName);
+          if (warning) {
+            await addContextEntry(sessionId, agentId, "todo_warning", warning, ["enforcer", agentName]);
+          }
+
+          await logActivity(sessionId, agentId, "SubagentStop", {
+            context_summary: contextSummary,
+            incomplete_tasks: warning ? true : false,
+          });
+          broadcast("SubagentStop", { session_id: sessionId, agent_id: agentId, incomplete_tasks: !!warning });
         }
         return c.json({});
       }
@@ -102,7 +112,16 @@ hooks.post("/:event", async (c) => {
         const prompt = body.prompt ?? body.message ?? "";
         await logActivity(sessionId, null, "UserPromptSubmit", { prompt: prompt.slice(0, 500) });
         broadcast("UserPromptSubmit", { session_id: sessionId });
-        return c.json({});
+
+        // Phase 3: Auto-attach project context to user prompts
+        const promptContext = await buildPromptContext(sessionId);
+
+        return c.json({
+          hookSpecificOutput: {
+            hookEventName: "UserPromptSubmit",
+            ...(promptContext ? { additionalContext: promptContext } : {}),
+          },
+        });
       }
 
       case "RegisterProject": {

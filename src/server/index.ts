@@ -1,10 +1,14 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { getDb } from "./db.js";
 import hooks from "./routes/hooks.js";
 import api from "./routes/api.js";
 import { addClient, removeClient } from "./routes/ws.js";
+import { existsSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const app = new Hono();
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
@@ -31,18 +35,28 @@ app.get(
 app.route("/hooks", hooks);
 app.route("/api", api);
 
-// 루트
-app.get("/", (c) => {
-  return c.json({
-    name: "clnode",
-    version: "0.1.0",
-    endpoints: {
-      hooks: "POST /hooks/:event",
-      api: "GET /api/*",
-      ws: "GET /ws",
-    },
+// 프로덕션: 빌드된 Web UI 서빙
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const webDistPath = resolve(__dirname, "../web");
+
+if (existsSync(webDistPath)) {
+  app.use("/*", serveStatic({ root: webDistPath }));
+  // SPA fallback: 매칭되지 않는 경로는 index.html로
+  app.get("/*", serveStatic({ root: webDistPath, path: "index.html" }));
+} else {
+  app.get("/", (c) => {
+    return c.json({
+      name: "clnode",
+      version: "0.1.0",
+      endpoints: {
+        hooks: "POST /hooks/:event",
+        api: "GET /api/*",
+        ws: "GET /ws",
+        ui: "Run 'pnpm build:web' first, then restart",
+      },
+    });
   });
-});
+}
 
 const PORT = parseInt(process.env.CLNODE_PORT ?? "3100", 10);
 

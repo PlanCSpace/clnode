@@ -201,19 +201,25 @@ clnode ui          # Open Web UI in browser
 
 ## Roadmap
 
-### Phase 2: Web UI
-- React 19 + Vite + TailwindCSS 4
-- Dashboard: active sessions, agents, recent activity timeline
-- Agents: agent tree (parent-child), status filter, context summary
-- Context: full-text search, tag filter, agent filter
-- Tasks: kanban board (pending → in_progress → completed)
-- Activity: real-time WebSocket log, event type filter, file change history
+## Phase 2 Status: Complete
+- [x] React 19 + Vite 7 + TailwindCSS 4
+- [x] Dashboard: stats cards, active sessions, recent activity, WebSocket LIVE
+- [x] Agents: agent tree (parent-child), status filter, context summary
+- [x] Context: session selector, full-text search (content/type/tags)
+- [x] Tasks: 3-column kanban (pending/in_progress/completed)
+- [x] Activity: event log + file changes tabs, event type filter, WebSocket live
+- [x] Production static serving (Hono serves dist/web + SPA fallback)
 
-### Phase 3: Intelligence (core value)
-- Smart context injection: select relevant context per agent role, not just recent
-- Cross-session context: persist and reuse context across Claude Code sessions
-- Stop hook → Todo Enforcer: verify task completion before agent stops
-- UserPromptSubmit → auto-attach relevant project context to prompts
+## Phase 3 Status: Complete
+- [x] **Smart context injection** (`src/server/services/intelligence.ts`)
+  - Sibling agent summaries (same parent, same session)
+  - Same-type agent history (learn from predecessors)
+  - Tagged context entries (agent name/type/all tags)
+  - Fallback to recent session context
+  - Assigned tasks for the starting agent
+- [x] **Cross-session context** — queries previous sessions of the same project
+- [x] **Todo Enforcer** — SubagentStop checks incomplete tasks, logs warning to context_entries
+- [x] **UserPromptSubmit auto-attach** — returns project context (active agents, open tasks, decisions, completed summaries)
 
 ### Phase 4: Polish & Distribution
 - Error handling + graceful fallbacks

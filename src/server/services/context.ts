@@ -49,3 +49,17 @@ export async function getRecentContext(sessionId: string, limit: number = 20) {
     sessionId, limit
   );
 }
+
+export async function getCrossSessionContext(sessionId: string, limit: number = 10) {
+  const db = await getDb();
+  return db.all(
+    `SELECT ce.*, s.id as source_session_id
+     FROM context_entries ce
+     JOIN sessions s ON ce.session_id = s.id
+     WHERE s.project_id IN (SELECT project_id FROM sessions WHERE id = ?)
+       AND ce.session_id != ?
+     ORDER BY ce.created_at DESC
+     LIMIT ?`,
+    sessionId, sessionId, limit
+  );
+}
