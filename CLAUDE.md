@@ -228,13 +228,42 @@ clnode ui          # Open Web UI in browser
 - [x] **Template skills** — 5 agent role templates (backend-dev, frontend-dev, reviewer, test-writer, architect)
 - [x] **`clnode init --with-skills`** — copies skill templates to target project
 
-## Next Steps
+## Dogfooding Status
 
-### Dogfooding
-Use clnode to develop clnode itself. Run `clnode init` on this repo and use
-multi-agent mode with the plugin active. This will surface real-world edge cases
-and validate the full lifecycle (context injection, cross-session persistence,
-Todo Enforcer) under actual development pressure.
+clnode has been initialized on itself (`clnode init --with-skills` on this repo).
+
+### What's Done
+- [x] `clnode start` — daemon running on port 3100
+- [x] `clnode init --with-skills` — hooks + 5 skill templates installed
+- [x] Project registered as `clnode` in DuckDB
+- [x] First dogfooding run: 3 parallel agents (backend-dev, reviewer, test-writer)
+  - backend-dev added `GET /api/stats` endpoint
+  - reviewer found intelligence.ts had no query error isolation → fixed with `safeQuery()`
+  - test-writer confirmed 100% API client coverage
+- [x] Hooks installed in `.claude/settings.local.json`
+
+### What to Verify Next (NEW SESSION REQUIRED)
+**Hooks activate on session start.** The current session was started before hooks
+were installed, so hooks haven't fired yet. On the next session:
+
+1. Start daemon if not running: `node dist/cli/index.js start`
+2. Open a new Claude Code session in this project
+3. Spawn subagents via Task tool (e.g., ask for parallel implementation + review)
+4. Check if hooks fire:
+   - `curl -sf http://localhost:3100/api/sessions` — should show the new session
+   - `curl -sf http://localhost:3100/api/agents` — should show spawned agents
+   - `curl -sf http://localhost:3100/api/activities?limit=10` — should show events
+   - `node dist/cli/index.js status` — should show active session/agents
+5. Open Web UI: `node dist/cli/index.js ui` or http://localhost:3100
+6. Verify SubagentStart returns `additionalContext` with smart context
+
+### Known Issues from Dogfooding
+- Hooks require Claude Code session restart after `clnode init` (documented in README + CLI)
+- `intelligence.ts` queries now wrapped in `safeQuery()` for partial success on failure
+- SQL injection in tag query fixed (now uses bind params instead of string interpolation)
+- `.claude/skills/` and `data/` added to `.gitignore`
+
+## Next Steps
 
 ### Skill Rules for Structured Context Entries
 Define skill rules that instruct agents to write structured context entries
@@ -247,3 +276,9 @@ When agents actively write these entry types, the smart context engine in
 `intelligence.ts` can select truly relevant context instead of just recent
 summaries. This is where the plugin's value multiplies — agents stop being
 isolated workers and start forming a knowledge graph across time and sessions.
+
+### Remaining Work
+- Verify hooks fire in a fresh Claude Code session (see checklist above)
+- Add `GET /api/stats` to web API client and Dashboard page
+- npm publish dry-run (`npm pack` to verify package contents)
+- Consider adding `clnode logs` CLI command for daemon log tailing
