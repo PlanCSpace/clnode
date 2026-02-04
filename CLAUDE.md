@@ -242,61 +242,37 @@ clnode has been initialized on itself (`clnode init --with-skills` on this repo)
   - test-writer confirmed 100% API client coverage
 - [x] Hooks installed in `.claude/settings.local.json`
 
-### What to Verify Next (NEW SESSION REQUIRED)
-**Hooks activate on session start.** The current session was started before hooks
-were installed, so hooks haven't fired yet. On the next session:
+### Verified (Dogfooding Session 2 — 2026-02-05)
+Full end-to-end hook pipeline verified in a live Claude Code session:
 
-1. Start daemon if not running: `node dist/cli/index.js start`
-2. Open a new Claude Code session in this project
-3. Spawn subagents via Task tool (e.g., ask for parallel implementation + review)
-4. Check if hooks fire:
-   - `curl -sf http://localhost:3100/api/sessions` — should show the new session
-   - `curl -sf http://localhost:3100/api/agents` — should show spawned agents
-   - `curl -sf http://localhost:3100/api/activities?limit=10` — should show events
-   - `node dist/cli/index.js status` — should show active session/agents
-5. Open Web UI: `node dist/cli/index.js ui` or http://localhost:3100
-6. Verify SubagentStart returns `additionalContext` with smart context
+- [x] **SessionStart** — session registered in DB automatically
+- [x] **SubagentStart** — agent registered, `additionalContext` injected with smart context
+- [x] **PostToolUse** — tool calls (Read, Bash, Grep, etc.) logged to activity_log
+- [x] **SubagentStop** — agent status set to `completed`, context_summary extracted from transcript
+- [x] **UserPromptSubmit** — project context (active agents, completed summaries) auto-attached
+- [x] **Context pipeline** — Agent A's summary saved on stop → Agent B receives it on start via `additionalContext`
 
-### Known Issues from Dogfooding
-- Hooks require Claude Code session restart after `clnode init` (documented in README + CLI)
-- `intelligence.ts` queries now wrapped in `safeQuery()` for partial success on failure
-- SQL injection in tag query fixed (now uses bind params instead of string interpolation)
-- `.claude/skills/` and `data/` added to `.gitignore`
+### Bugs Fixed During Dogfooding
+- **BigInt serialization crash** — DuckDB `COUNT(*)` returns BigInt, `JSON.stringify()` fails → fixed with `Number()` wrapper in all count functions
+- **context_summary always null** — Claude Code SubagentStop doesn't send `context_summary` field; only sends `agent_transcript_path` → fixed by reading transcript JSONL and extracting last assistant text (with 500ms delay for file flush)
+
+### Claude Code SubagentStop Payload (v2.1.31)
+Claude Code does NOT send `context_summary` or `result` in SubagentStop. Actual fields:
+- `session_id`, `cwd`, `permission_mode`, `hook_event_name`, `stop_hook_active`
+- `agent_id` (short hash like "ae6f7df")
+- `agent_transcript_path` (JSONL at `.claude/projects/.../subagents/agent-{id}.jsonl`)
+- `agent_type`
+
+### Known Issues
+- Hooks require Claude Code session restart after `clnode init`
+- Daemon crash during agent execution causes SubagentStop to be missed (hook.sh fails silently)
+- `intelligence.ts` queries wrapped in `safeQuery()` for partial success on failure
+- Transcript extraction needs 500ms delay (race condition with file write)
 
 ## Next Steps
 
-### Skill Rules for Structured Context Entries
-Define skill rules that instruct agents to write structured context entries
-using specific `entry_type` values:
-- **`decision`** — architectural or implementation decisions with rationale
-- **`blocker`** — issues that block progress and need resolution
-- **`handoff`** — explicit notes for the next agent taking over related work
-
-When agents actively write these entry types, the smart context engine in
-`intelligence.ts` can select truly relevant context instead of just recent
-summaries. This is where the plugin's value multiplies — agents stop being
-isolated workers and start forming a knowledge graph across time and sessions.
-
-### Lessons from the Build Session
-This project was built in a single extended Claude Code session (Phase 1→4).
-The session itself proved why clnode is needed:
-
-1. Context hit limits during sequential Phase 1→4 implementation
-2. Session was cut off and had to continue via summary-based handoff
-3. Missing info from summary required re-reading files from scratch
-
-If clnode had been active from the start with each Phase as a subagent:
-- Phase 1 agent stop → DB stores "Hono server + DuckDB 7 tables + CLI done"
-- Phase 2 agent start → receives Phase 1 results via `additionalContext`
-- Session cut → new session recovers everything via cross-session context
-- Leader only says "do Phase 2" → context stays minimal
-
-The real test is next session: spawn 3 subagents in parallel from the start,
-verify `additionalContext` injection works end-to-end, and confirm the Leader
-context stays clean throughout.
-
 ### Remaining Work
-- Verify hooks fire in a fresh Claude Code session (see checklist above)
 - Add `GET /api/stats` to web API client and Dashboard page
 - npm publish dry-run (`npm pack` to verify package contents)
 - Consider adding `clnode logs` CLI command for daemon log tailing
+- Skill rules for structured context entries (`decision`, `blocker`, `handoff` entry types)
