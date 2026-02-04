@@ -65,6 +65,7 @@ DuckDB is the mailbox.
 - **Server**: Hono + @hono/node-server + @hono/node-ws
 - **DB**: DuckDB (duckdb-async) — `data/clnode.duckdb`
 - **CLI**: commander.js
+- **Web UI**: React 19 + Vite 7 + TailwindCSS 4 + react-icons
 - **Package Manager**: pnpm
 
 ## Hook Protocol (stdin → stdout)
@@ -101,7 +102,7 @@ src/
     db.ts               — DuckDB connection + schema initialization
     routes/
       hooks.ts          — POST /hooks/:event (7 event handlers + RegisterProject)
-      api.ts            — GET /api/* (REST API)
+      api.ts            — GET/PATCH/DELETE /api/* (REST API)
       ws.ts             — WebSocket broadcast utility
     services/
       project.ts        — Project registration
@@ -112,6 +113,26 @@ src/
       task.ts           — Task state tracking (5-stage: idea→planned→pending→in_progress→completed)
       comment.ts        — Task comments CRUD
       activity.ts       — Activity log (details JSON)
+  web/
+    App.tsx             — Router + ProjectProvider
+    index.css           — Tailwind + custom styles
+    index.html          — SPA entry point
+    lib/
+      api.ts            — API client (fetch with error handling)
+      useWebSocket.ts   — WebSocket hook for live events
+      ProjectContext.tsx — Global project selection context
+    components/
+      Layout.tsx        — Sidebar nav (react-icons + project selector)
+      Card.tsx          — Reusable card wrapper
+      Badge.tsx         — Status/type badge with dot indicator
+      Chart.tsx         — Horizontal bar chart (no deps)
+      AgentDetail.tsx   — Agent detail expansion (Summary/Context/Files tabs)
+    pages/
+      Dashboard.tsx     — Stats cards, bar charts, active sessions
+      Agents.tsx        — Agent tree with expandable detail + kill button
+      Context.tsx       — Session context entries with search
+      Tasks.tsx         — 5-column kanban with drag-and-drop
+      Activity.tsx      — Event log + file changes
 templates/
   hooks-config.json     — Hooks config template (HOOK_SCRIPT_PATH placeholder)
 data/                   — DuckDB file storage (gitignored)
@@ -171,9 +192,15 @@ clnode ui          # Open Web UI in browser
 - `GET /api/sessions/:id` — Session detail
 - `GET /api/sessions/:id/agents` — Agents by session
 - `GET /api/sessions/:id/context` — Context entries by session
+- `DELETE /api/sessions/:id/context?entry_type=X` — Delete context by type
 - `GET /api/sessions/:id/files` — File changes by session
 - `GET /api/sessions/:id/activities` — Activities by session
 - `GET /api/agents[?active=true]` — Agent list
+- `GET /api/agents/:id` — Single agent
+- `GET /api/agents/:id/context` — Context entries by agent
+- `GET /api/agents/:id/files` — File changes by agent
+- `PATCH /api/agents/:id` — Update agent (kill zombie: `{ status: "completed" }`)
+- `DELETE /api/agents/:id` — Delete agent + related data
 - `GET /api/tasks[?project_id=X]` — Task list
 - `GET /api/tasks/:id` — Single task
 - `POST /api/tasks` — Create task (status default: "idea")
@@ -182,6 +209,7 @@ clnode ui          # Open Web UI in browser
 - `GET /api/tasks/:id/comments` — Task comments
 - `POST /api/tasks/:id/comments` — Add comment
 - `GET /api/activities[?limit=50]` — Recent activities
+- `GET /api/stats` — Aggregate stats (sessions, agents, context, files)
 
 ## Important Notes
 - Use `now()` instead of `current_timestamp` in DuckDB
@@ -214,9 +242,19 @@ clnode ui          # Open Web UI in browser
 - [x] Dashboard: stats cards, active sessions, recent activity, WebSocket LIVE
 - [x] Agents: agent tree (parent-child), status filter, context summary
 - [x] Context: session selector, full-text search (content/type/tags)
-- [x] Tasks: 3-column kanban (pending/in_progress/completed)
+- [x] Tasks: 5-column kanban (idea/planned/pending/in_progress/completed)
 - [x] Activity: event log + file changes tabs, event type filter, WebSocket live
 - [x] Production static serving (Hono serves dist/web + SPA fallback)
+- [x] **Supabase-style UI renewal** (zinc + emerald dark theme)
+  - Card, Badge, Chart reusable components
+  - react-icons sidebar navigation + project selector dropdown
+  - Dashboard: 6 stat cards with icons + 2 bar charts (agent types, activity breakdown)
+  - Agents: expandable detail view (Summary/Context/Files tabs) + Kill button for zombies
+  - Tasks: HTML5 drag-and-drop kanban with visual drop targets
+  - Global project filter (ProjectContext) connected to all pages
+  - API error handling (res.ok check) + debounced WebSocket reload (500ms)
+  - Agent detail API: GET /agents/:id, /agents/:id/context, /agents/:id/files
+  - Agent kill API: PATCH /agents/:id { status: "completed" }
 
 ## Phase 3 Status: Complete
 - [x] **Smart context injection** (`src/server/services/intelligence.ts`)
@@ -274,13 +312,22 @@ Claude Code does NOT send `context_summary` or `result` in SubagentStop. Actual 
 ### Known Issues
 - Hooks require Claude Code session restart after `clnode init`
 - Daemon crash during agent execution causes SubagentStop to be missed (hook.sh fails silently)
+- Agent killed by ESC or context limit → SubagentStop not fired → zombie in DB (use Kill button in UI or `PATCH /api/agents/:id`)
 - `intelligence.ts` queries wrapped in `safeQuery()` for partial success on failure
 - Transcript extraction needs 500ms delay (race condition with file write)
+
+### Swarm Efficiency Lessons (Dogfooding Session 3 — 2026-02-05)
+- **Agent sizing matters**: one agent writing 14 files is too large → context exhaustion risk. Keep to 5-7 files per agent.
+- **Don't agent trivial tasks**: 3-line changes should be done by the Leader directly.
+- **Reviewer agent is always worth it**: catches type safety, stale data, missing error handling.
+- **True parallelism requires same-message Task calls**: separate messages = sequential execution.
+- **clnode's sweet spot**: multi-step chains where Agent B needs Agent A's results (context relay), not embarrassingly parallel work.
 
 ## Next Steps
 
 ### Remaining Work
-- Add `GET /api/stats` to web API client and Dashboard page
 - npm publish dry-run (`npm pack` to verify package contents)
 - Consider adding `clnode logs` CLI command for daemon log tailing
 - Skill rules for structured context entries (`decision`, `blocker`, `handoff` entry types)
+- Server-side project filtering for sessions/agents API (currently client-side only)
+- Dashboard: debounce could be configurable or use SSE instead of polling
