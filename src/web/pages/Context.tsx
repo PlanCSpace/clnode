@@ -37,10 +37,10 @@ export default function Context() {
         <select
           value={selectedSession}
           onChange={(e) => setSelectedSession(e.target.value)}
-          className="bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-white"
+          className="cl-select bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-white"
         >
           {sessions.map((s) => (
-            <option key={s.id} value={s.id}>{s.id} ({s.status})</option>
+            <option key={s.id} value={s.id}>{s.id.slice(0, 8)} ({s.status})</option>
           ))}
         </select>
         <input

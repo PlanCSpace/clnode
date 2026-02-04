@@ -66,7 +66,7 @@ export default function Activity() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+              className="cl-select bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-white"
             >
               <option value="">All events</option>
               {EVENT_TYPES.map((t) => (
@@ -82,7 +82,7 @@ export default function Activity() {
           {filtered.length === 0 && <p className="text-gray-600 text-sm">No activity</p>}
           {filtered.map((a) => {
             let details: Record<string, unknown> = {};
-            try { details = JSON.parse(a.details); } catch { /* ignore */ }
+            try { details = JSON.parse(a.details); } catch (_) { /* ignore */ }
             return (
               <div key={a.id} className="flex items-start gap-2 text-xs py-1.5 border-b border-gray-900">
                 <span className="text-gray-600 w-20 shrink-0">

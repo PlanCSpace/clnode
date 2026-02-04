@@ -11,7 +11,7 @@ export function useWebSocket() {
   const [connected, setConnected] = useState(false);
   const [reconnectCount, setReconnectCount] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback(() => {
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -30,14 +30,14 @@ export function useWebSocket() {
       try {
         const parsed = JSON.parse(e.data) as WsEvent;
         setEvents((prev) => [parsed, ...prev].slice(0, 200));
-      } catch { /* ignore */ }
+      } catch (_) { /* ignore */ }
     };
   }, []);
 
   useEffect(() => {
     connect();
     return () => {
-      clearTimeout(reconnectRef.current);
+      if (reconnectRef.current) clearTimeout(reconnectRef.current);
       wsRef.current?.close();
     };
   }, [connect]);
