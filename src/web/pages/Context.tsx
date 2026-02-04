@@ -39,6 +39,7 @@ export default function Context() {
           onChange={(e) => setSelectedSession(e.target.value)}
           className="cl-select bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-white"
         >
+          {sessions.length === 0 && <option value="">No sessions</option>}
           {sessions.map((s) => (
             <option key={s.id} value={s.id}>{s.id.slice(0, 8)} ({s.status})</option>
           ))}
@@ -53,7 +54,13 @@ export default function Context() {
       </div>
 
       <div className="space-y-2">
-        {filtered.length === 0 && <p className="text-gray-600 text-sm">No context entries</p>}
+        {filtered.length === 0 && (
+          <p className="text-gray-600 text-sm">
+            {sessions.length === 0
+              ? "No sessions yet. Start a Claude Code session with hooks enabled."
+              : "No context entries"}
+          </p>
+        )}
         {filtered.map((entry) => (
           <div key={entry.id} className="bg-gray-900 border border-gray-800 rounded p-3">
             <div className="flex items-center gap-2 mb-1">
