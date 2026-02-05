@@ -207,17 +207,19 @@ program
         }
       }
 
-      // Rules: always copy clnode-usage.md (universal), team.md only with --with-agents
+      // Rules: clnode-usage.md always, others only with --with-agents
       const rulesSourceDir = path.resolve(baseDir, "../../templates/rules");
       const rulesTargetDir = path.join(claudeDir, "rules");
+      // Universal rules (always copied)
+      const universalRules = ["clnode-usage.md"];
 
       if (fs.existsSync(rulesSourceDir)) {
         fs.mkdirSync(rulesTargetDir, { recursive: true });
         const rulesFiles = fs.readdirSync(rulesSourceDir).filter((f: string) => f.endsWith(".md"));
         let rulesCount = 0;
         for (const file of rulesFiles) {
-          // team.md is clnode-specific, skip unless --with-agents
-          if (file === "team.md" && !opts.withAgents) {
+          // Skip non-universal rules unless --with-agents
+          if (!universalRules.includes(file) && !opts.withAgents) {
             continue;
           }
           const dest = path.join(rulesTargetDir, file);
@@ -263,18 +265,28 @@ program
       }
     }
 
-    // Register project
+    // Register project with retry
     if (daemonRunning) {
-      try {
-        const res = await fetch(`${portUrl}/hooks/RegisterProject`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ project_id: projectId, project_name: projectName, project_path: target }),
-        });
-        if (res.ok) {
-          console.log(`[clnode] Project registered: ${projectId} (${target})`);
+      let registered = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const res = await fetch(`${portUrl}/hooks/RegisterProject`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ project_id: projectId, project_name: projectName, project_path: target }),
+          });
+          if (res.ok) {
+            console.log(`[clnode] Project registered: ${projectId} (${target})`);
+            registered = true;
+            break;
+          }
+        } catch {
+          if (attempt < 3) {
+            await new Promise(r => setTimeout(r, 500));
+          }
         }
-      } catch {
+      }
+      if (!registered) {
         console.log(`[clnode] Could not register project — will be registered on first hook event`);
       }
     }
