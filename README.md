@@ -87,6 +87,10 @@ Agents communicate **through time**, not through the Leader. Agent A leaves a su
 
 ## Features
 
+### No MCP Required
+
+Pure hook-based implementation. No external MCP servers, no complex setup — just `npx clnode init .` and you're done.
+
 ### Smart Context Injection
 
 Not just recent context — **relevant** context:
@@ -98,9 +102,30 @@ Not just recent context — **relevant** context:
 | **Cross-Session** | Summaries from previous sessions on the same project |
 | **Tagged Context** | Entries explicitly tagged for specific agents |
 
-### Todo Enforcer
+### Context Compression
 
-Agents stopping with incomplete tasks get flagged — no silent failures.
+97%+ compression via `/compress-context` skill (31K → 2K chars). Prevents context explosion in multi-agent chains.
+
+### Token Analytics
+
+Track token usage per agent. See exactly how much each subagent costs in the Web UI dashboard.
+
+### 6-Stage Kanban
+
+`idea` → `planned` → `pending` → `in_progress` → `needs_review` → `completed`
+
+Visual task tracking with automatic status updates when agents start/stop.
+
+### Review Loop Protocol
+
+Structured feedback cycle: Implement → Review → Fix → Re-review (user decides when to stop). Prevents infinite loops.
+
+### Cost Optimization Guide
+
+Built-in model recommendations:
+- **Opus**: Leader, Reviewer (decisions)
+- **Sonnet**: Implementation agents (coding)
+- **Haiku**: Simple/mechanical tasks
 
 ### Prompt Auto-Attach
 
