@@ -4,52 +4,45 @@
 
 ## For LLM Agents
 
-이 가이드는 Claude Code 에이전트가 따라할 수 있도록 작성되었습니다.
+이 가이드의 지시사항을 순서대로 실행하세요.
 
-### 1. 설치
+### Step 1: 포트 확인
 
+사용자에게 질문하세요: "clnode 데몬 포트를 지정하시겠습니까? (기본: 3100)"
+
+- 사용자가 포트 번호를 입력하면 → 해당 포트 사용
+- 사용자가 입력하지 않거나 "기본" 또는 "엔터"라고 하면 → 3100 사용
+
+### Step 2: 설치 실행
+
+포트가 기본값(3100)이면:
 ```bash
 npx clnode init .
 ```
 
-이 명령어 하나로:
-- hooks 설정 (에이전트 간 컨텍스트 공유)
-- skills 템플릿 복사 (compress-context, session-usage)
-- clnode-usage 규칙 복사 (범용 사용법)
-- 데몬 자동 시작 (localhost:3100)
-- 프로젝트 등록
-
-**옵션:**
+포트가 다른 값이면 (예: 3101):
 ```bash
-# 기본 (권장) - hooks + skills + 범용 규칙
-npx clnode init .
-
-# clnode 개발용 - 추가로 agents, team.md 포함
-npx clnode init . --with-agents
-
-# hooks만 설치
-npx clnode init . --hooks-only
+npx clnode init . --port 3101
 ```
 
-### 2. 확인
+### Step 3: 설치 확인
 
-설치가 성공하면 다음 메시지가 출력됩니다:
+다음 메시지가 출력되면 성공:
 ```
 [clnode] Setup complete!
 [clnode] Restart your Claude Code session to activate hooks.
 ```
 
-### 3. Claude Code 세션 재시작
+### Step 4: 세션 재시작 안내
 
-**중요:** hooks는 세션 시작 시에만 로드됩니다.
-현재 세션을 종료(`/exit` 또는 ESC)하고 다시 `claude`를 실행하세요.
+사용자에게 알려주세요:
+"설치 완료! hooks를 활성화하려면 현재 세션을 종료하고 다시 시작하세요. `/exit` 또는 ESC로 종료 후 `claude`를 다시 실행하세요."
 
-### 4. 동작 확인
+### Step 5: 재시작 후 확인
 
 재시작 후 프롬프트를 입력하면 시스템 메시지에 다음이 표시됩니다:
 ```
 [clnode project context]
-## Open Tasks
 ...
 ```
 
