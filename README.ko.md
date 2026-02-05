@@ -41,6 +41,17 @@ Leader       → 결정만 내림, 컨텍스트 최소화
 
 ## 빠른 시작
 
+### Claude Code 사용자
+
+Claude Code에서 이 명령어를 실행하세요:
+```
+curl -s https://raw.githubusercontent.com/SierraDevsec/clnode/main/docs/installation.md
+```
+
+Claude가 가이드를 읽고 자동으로 clnode를 설치합니다.
+
+### 수동 설치
+
 ```bash
 # 프로젝트 디렉토리에서
 npx clnode init .

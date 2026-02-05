@@ -41,6 +41,17 @@ No wrapper. No custom framework. Just a plugin that fills the gap.
 
 ## Quick Start
 
+### For Claude Code Users
+
+Just ask Claude Code to run this:
+```
+curl -s https://raw.githubusercontent.com/SierraDevsec/clnode/main/docs/installation.md
+```
+
+Claude will read the guide and install clnode automatically.
+
+### Manual Install
+
 ```bash
 # In your project directory
 npx clnode init .
