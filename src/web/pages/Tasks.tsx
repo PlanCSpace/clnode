@@ -8,15 +8,17 @@ const COLUMNS = [
   { key: "planned", label: "Planned", color: "blue" },
   { key: "pending", label: "Pending", color: "yellow" },
   { key: "in_progress", label: "In Progress", color: "orange" },
+  { key: "needs_review", label: "Needs Review", color: "pink" },
   { key: "completed", label: "Completed", color: "green" },
 ] as const;
 
 const COL_COLORS: Record<string, { bg: string; text: string; border: string; badge: string }> = {
-  idea:        { bg: "bg-purple-900/20", text: "text-purple-300", border: "border-purple-800/50", badge: "bg-purple-900 text-purple-300" },
-  planned:     { bg: "bg-blue-900/20", text: "text-blue-300", border: "border-blue-800/50", badge: "bg-blue-900 text-blue-300" },
-  pending:     { bg: "bg-amber-900/20", text: "text-amber-300", border: "border-amber-800/50", badge: "bg-amber-900 text-amber-300" },
-  in_progress: { bg: "bg-orange-900/20", text: "text-orange-300", border: "border-orange-800/50", badge: "bg-orange-900 text-orange-300" },
-  completed:   { bg: "bg-emerald-900/20", text: "text-emerald-300", border: "border-emerald-800/50", badge: "bg-emerald-900 text-emerald-300" },
+  idea:         { bg: "bg-purple-900/20", text: "text-purple-300", border: "border-purple-800/50", badge: "bg-purple-900 text-purple-300" },
+  planned:      { bg: "bg-blue-900/20", text: "text-blue-300", border: "border-blue-800/50", badge: "bg-blue-900 text-blue-300" },
+  pending:      { bg: "bg-amber-900/20", text: "text-amber-300", border: "border-amber-800/50", badge: "bg-amber-900 text-amber-300" },
+  in_progress:  { bg: "bg-orange-900/20", text: "text-orange-300", border: "border-orange-800/50", badge: "bg-orange-900 text-orange-300" },
+  needs_review: { bg: "bg-pink-900/20", text: "text-pink-300", border: "border-pink-800/50", badge: "bg-pink-900 text-pink-300" },
+  completed:    { bg: "bg-emerald-900/20", text: "text-emerald-300", border: "border-emerald-800/50", badge: "bg-emerald-900 text-emerald-300" },
 };
 
 const TAG_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
@@ -79,7 +81,7 @@ export default function Tasks() {
   useEffect(() => {
     if (events.length > 0) {
       const latest = events[0];
-      if (["SubagentStart", "SubagentStop"].includes(latest.event)) {
+      if (["SubagentStart", "SubagentStop", "task_created", "task_updated", "task_deleted"].includes(latest.event)) {
         reload();
       }
     }

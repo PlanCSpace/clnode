@@ -41,3 +41,45 @@ curl -s -X POST http://localhost:3100/hooks/PostContext \
 - Include relevant tags for discoverability
 - Don't duplicate information that's already in the commit message
 - `decision` and `blocker` entries persist across sessions via cross-session context
+- **Language**: All files in `.claude/` and `templates/` directories must be written in English
+
+---
+
+## Review Loop Protocol
+
+After a reviewer requests fixes and the implementer completes them, **always confirm with the user** before proceeding.
+
+### Flow
+
+```
+1. Implementer done → Reviewer reviews
+2. Reviewer finds issues → Implementer fixes
+3. After fixes → Ask user: "Re-review needed?"
+4a. User "yes" → Run reviewer again (back to step 2)
+4b. User "no" or "stop" → Add needs_review tag, end current phase
+```
+
+### Leader's Responsibility
+
+- After fixes complete, **do NOT auto-trigger next review**
+- Always ask user: "Should I run re-review?"
+- If user wants to stop, add `needs_review` tag to the task
+
+### Example Conversation
+
+```
+Leader: "Reviewer found 3 issues, backend-dev fixed all of them.
+        Should I run re-review?"
+
+User: "yes"
+→ Run reviewer again
+
+User: "no" / "stop" / "later"
+→ Add [needs_review] tag to task, end current phase
+```
+
+### Why This Protocol?
+
+- Prevents infinite review loops (user can stop anytime)
+- Ensures review quality (no skipping verification after fixes)
+- Context management (prevents context explosion from unnecessary review cycles)

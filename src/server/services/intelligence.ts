@@ -1,4 +1,4 @@
-import { getDb } from "../db.js";
+import { getDb, extractCount } from "../db.js";
 
 interface ContextRow {
   id: number;
@@ -264,27 +264,39 @@ export async function buildPromptContext(
     `SELECT t.title, t.status, t.assigned_to, t.tags
      FROM tasks t
      JOIN sessions s ON t.project_id = s.project_id
-     WHERE s.id = ? AND t.status NOT IN ('completed')
+     WHERE s.id = ? AND t.status IN ('pending', 'in_progress', 'needs_review')
      ORDER BY
        CASE t.status
          WHEN 'in_progress' THEN 1
-         WHEN 'pending' THEN 2
-         WHEN 'planned' THEN 3
-         WHEN 'idea' THEN 4
-         ELSE 5
+         WHEN 'needs_review' THEN 2
+         WHEN 'pending' THEN 3
+         ELSE 4
        END,
        t.created_at ASC
      LIMIT 10`,
     sessionId
   ));
 
-  if (tasks.length > 0) {
+  // Count backlog (idea + planned)
+  const backlogCount = await safeQuery<{ count: number }>("prompt-backlog", () => db.all(
+    `SELECT COUNT(*) as count
+     FROM tasks t
+     JOIN sessions s ON t.project_id = s.project_id
+     WHERE s.id = ? AND t.status IN ('idea', 'planned')`,
+    sessionId
+  ));
+  const backlog = extractCount(backlogCount);
+
+  if (tasks.length > 0 || backlog > 0) {
     const lines = tasks.map(
       (t) => {
         const tagsStr = t.tags && t.tags.length > 0 ? ` [${t.tags.join(", ")}]` : "";
         return `- [${t.status}] ${t.title}${tagsStr}${t.assigned_to ? ` → ${t.assigned_to}` : ""}`;
       }
     );
+    if (backlog > 0) {
+      lines.push(`\n(+${backlog} in backlog)`);
+    }
     sections.push(`## Open Tasks\n${lines.join("\n")}`);
   }
 

@@ -46,3 +46,19 @@ Leader (Main Session / Opus)
 - Report to user after each phase starts
 - Report to user after each phase completes
 - Include summary of completed work and next steps
+
+## Review Loop Protocol
+
+After fixes are made, **do NOT auto-trigger re-review** — always confirm with user.
+
+```
+Implement → Review → Fix → Ask user "Re-review?"
+                              ├─ "yes" → Run reviewer again
+                              └─ "no" → End (add needs_review tag)
+```
+
+### Rules
+
+1. After fixes complete, Leader MUST ask user if re-review is needed
+2. If user wants to stop, add `[needs_review]` tag to the task
+3. Prevent infinite loops: only repeat when user explicitly says "continue"

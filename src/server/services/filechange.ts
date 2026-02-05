@@ -1,4 +1,4 @@
-import { getDb } from "../db.js";
+import { getDb, extractCount } from "../db.js";
 
 export async function recordFileChange(
   sessionId: string,
@@ -33,7 +33,7 @@ export async function getFileChangesByAgent(agentId: string) {
 export async function getTotalFileChangesCount() {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM file_changes`);
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function getFileChangesCountByProject(projectId: string) {
@@ -44,5 +44,5 @@ export async function getFileChangesCountByProject(projectId: string) {
      WHERE sessions.project_id = ?`,
     projectId
   );
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }

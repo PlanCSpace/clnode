@@ -1,4 +1,4 @@
-import { getDb } from "../db.js";
+import { getDb, extractCount } from "../db.js";
 
 export async function addContextEntry(
   sessionId: string,
@@ -74,13 +74,13 @@ export async function deleteContextByType(sessionId: string, entryType: string):
     `DELETE FROM context_entries WHERE session_id = ? AND entry_type = ?`,
     sessionId, entryType
   );
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function getTotalContextEntriesCount() {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM context_entries`);
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function getContextEntriesCountByProject(projectId: string) {
@@ -91,5 +91,5 @@ export async function getContextEntriesCountByProject(projectId: string) {
      WHERE sessions.project_id = ?`,
     projectId
   );
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }

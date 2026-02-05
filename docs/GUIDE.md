@@ -1,6 +1,6 @@
 # clnode 사용 가이드
 
-> [English README](../README.md) | [한국어 README](../README.ko.md)
+> [English README](../README.md) | [한국어 README](../README.ko.md) | [English Guide](./GUIDE.en.md)
 
 Claude Code에서 멀티에이전트를 돌릴 때, 에이전트끼리 결과를 주고받을 수 없어서 Leader의 컨텍스트가 폭발하는 문제를 해결하는 플러그인입니다.
 
@@ -12,10 +12,12 @@ Claude Code에서 멀티에이전트를 돌릴 때, 에이전트끼리 결과를
 2. [설치](#설치)
 3. [데몬 시작](#데몬-시작)
 4. [프로젝트 초기화 (clnode init)](#프로젝트-초기화)
-5. [Claude Code에서 사용하기](#claude-code에서-사용하기)
-6. [Web UI 대시보드](#web-ui-대시보드)
-7. [CLI 명령어 전체](#cli-명령어-전체)
-8. [트러블슈팅](#트러블슈팅)
+5. [Agents, Skills, Rules 이해하기](#agents-skills-rules-이해하기)
+6. [커스텀 에이전트 만들기](#커스텀-에이전트-만들기)
+7. [Claude Code에서 사용하기](#claude-code에서-사용하기)
+8. [Web UI 대시보드](#web-ui-대시보드)
+9. [CLI 명령어 전체](#cli-명령어-전체)
+10. [트러블슈팅](#트러블슈팅)
 
 ---
 
@@ -125,16 +127,123 @@ clnode init /path/to/your/project
 clnode init /path/to/your/project --with-skills
 ```
 
-5가지 에이전트 역할 템플릿을 프로젝트에 복사합니다:
-- `backend-dev` — 백엔드 개발
-- `frontend-dev` — 프론트엔드 개발
-- `reviewer` — 코드 리뷰
-- `test-writer` — 테스트 작성
-- `architect` — 아키텍처 설계
+`templates/` 디렉토리의 agents, skills, rules를 프로젝트의 `.claude/` 디렉토리로 복사합니다.
+
+**복사되는 파일:**
+```
+.claude/
+├── agents/           # 에이전트 정의 (5개)
+│   ├── backend-dev.md
+│   ├── frontend-dev.md
+│   ├── reviewer.md
+│   ├── test-writer.md
+│   └── architect.md
+├── skills/           # 상세 작업 지침 (5개)
+│   └── (위와 동일)
+└── rules/            # 자동 로드 규칙 (5개)
+    ├── team.md
+    ├── typescript.md
+    ├── react.md
+    ├── nodejs.md
+    └── swarm-context.md
+```
 
 ### 초기화 후 반드시 해야 할 것
 
 **Claude Code 세션을 재시작하세요.** hooks는 세션 시작 시점에 로드되므로, `clnode init` 후 반드시 세션을 재시작해야 hooks가 활성화됩니다.
+
+---
+
+## Agents, Skills, Rules 이해하기
+
+Claude Code는 세 가지 유형의 설정 파일을 지원합니다. 각각 다른 역할을 합니다:
+
+### 개념 비교
+
+| 파일 위치 | 역할 | 로드 시점 | 내용 |
+|----------|------|----------|------|
+| `.claude/agents/*.md` | **에이전트 정의** | Task 도구로 에이전트 생성 시 | 메타데이터 (이름, 도구, 모델) + 기본 지침 |
+| `.claude/skills/*.md` | **상세 작업 지침** | `/skill-name` 명령 또는 에이전트가 참조 시 | 구체적인 구현 패턴, API 사용법, 코드 스타일 |
+| `.claude/rules/*.md` | **자동 규칙** | 모든 대화에 자동 로드 | 프로젝트 전반 규칙, 컨벤션, 제약 |
+
+### 예시로 보는 차이
+
+```
+┌─────────────────────────┬─────────────────────────┬────────────────────────────────────────┐
+│ 파일                     │ 역할                    │ 내용 예시                               │
+├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
+│ rules/typescript.md     │ 자동 로드 규칙          │ strict 모드, import 순서, 네이밍 규칙    │
+├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
+│ skills/backend-dev.md   │ 백엔드 작업 지침        │ API 패턴, DB 쿼리 방식, 에러 처리 방법   │
+├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
+│ agents/backend-dev.md   │ 에이전트 메타데이터      │ name, tools, model + 기본 책임 범위      │
+└─────────────────────────┴─────────────────────────┴────────────────────────────────────────┘
+```
+
+### 언제 무엇을 쓰나?
+
+- **rules**: 모든 대화에 항상 적용되어야 하는 규칙 (코드 스타일, 프로젝트 컨벤션)
+- **skills**: 특정 역할이 필요할 때만 참조하는 상세 지침 (구현 패턴, API 가이드)
+- **agents**: 멀티에이전트 모드에서 Task 도구로 생성되는 에이전트의 정의
+
+### clnode 제공 템플릿
+
+| 에이전트 | 역할 | 권장 모델 |
+|---------|------|----------|
+| `backend-dev` | API, DB, 비즈니스 로직 | Sonnet |
+| `frontend-dev` | UI 컴포넌트, 상태 관리 | Sonnet |
+| `reviewer` | 코드 리뷰, 품질 검사 | Opus |
+| `test-writer` | 테스트 작성 | Sonnet |
+| `architect` | 설계, 의사결정 | Opus |
+
+---
+
+## 커스텀 에이전트 만들기
+
+프로젝트에 맞는 커스텀 에이전트를 만들 수 있습니다.
+
+### 1. 에이전트 정의 생성
+
+`.claude/agents/my-agent.md`:
+
+```markdown
+---
+name: my-agent
+description: 프로젝트 전용 에이전트 설명
+tools: Read, Edit, Write, Bash, Grep, Glob
+model: sonnet
+---
+
+당신은 [역할]을 담당하는 에이전트입니다.
+
+## 책임
+- 첫 번째 책임
+- 두 번째 책임
+
+## 가이드라인
+- 기존 패턴을 따르세요
+- 타입 안전한 코드를 작성하세요
+
+## 완료 시
+작업 요약을 제공하세요:
+1. 무엇을 만들었는지
+2. 어떤 파일을 수정했는지
+3. 알려진 제한사항
+```
+
+### 2. (선택) 상세 스킬 추가
+
+에이전트가 참조할 수 있는 상세 지침을 `.claude/skills/my-agent.md`에 작성합니다.
+
+### 3. (선택) 프로젝트 규칙 추가
+
+모든 에이전트가 따라야 할 규칙을 `.claude/rules/my-rule.md`에 작성합니다.
+
+### 기존 프로젝트 파일 활용
+
+**이미 프로젝트에 `.claude/agents/`, `.claude/skills/`, `.claude/rules/` 디렉토리가 있다면**, `clnode init --with-skills`는 기존 파일을 덮어쓰지 않고 없는 파일만 복사합니다.
+
+자신만의 에이전트 구성을 유지하면서 clnode의 기본 템플릿을 보완할 수 있습니다.
 
 ---
 
@@ -252,8 +361,11 @@ Web UI 칸반 보드에서 카드를 드래그하거나 화살표 버튼으로 �
 | `clnode stop` | 데몬 중지 |
 | `clnode status` | 활성 세션, 에이전트 수 표시 |
 | `clnode init [path]` | 대상 프로젝트에 hooks 설치 + DB 등록 |
-| `clnode init [path] --with-skills` | hooks + 에이전트 스킬 템플릿 복사 |
+| `clnode init [path] --with-skills` | hooks + agents/skills/rules 템플릿 복사 |
 | `clnode ui` | 브라우저에서 Web UI 열기 |
+| `clnode logs` | 데몬 로그 보기 |
+| `clnode logs -f` | 데몬 로그 실시간 팔로우 |
+| `clnode logs -n 100` | 최근 100줄 로그 보기 |
 
 환경 변수:
 

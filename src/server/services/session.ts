@@ -1,4 +1,4 @@
-import { getDb } from "../db.js";
+import { getDb, extractCount } from "../db.js";
 
 export async function startSession(id: string, projectId: string | null): Promise<void> {
   const db = await getDb();
@@ -40,13 +40,13 @@ export async function getSession(id: string) {
 export async function getTotalSessionsCount() {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM sessions`);
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function getActiveSessionsCount() {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM sessions WHERE status = 'active'`);
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function getSessionsByProject(projectId: string) {
@@ -62,11 +62,11 @@ export async function getActiveSessionsByProject(projectId: string) {
 export async function getSessionsCountByProject(projectId: string) {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM sessions WHERE project_id = ?`, projectId);
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function getActiveSessionsCountByProject(projectId: string) {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM sessions WHERE project_id = ? AND status = 'active'`, projectId);
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }

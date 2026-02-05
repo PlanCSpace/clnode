@@ -1,25 +1,43 @@
 import { Database } from "duckdb-async";
-import path from "node:path";
-import fs from "node:fs";
+import { beforeEach, afterAll } from "vitest";
 
-const DATA_DIR = path.resolve(
-  import.meta.dirname ?? path.dirname(new URL(import.meta.url).pathname),
-  "../../data"
-);
+/**
+ * Re-export extractCount from db.ts for test mocks.
+ * This ensures test mocks use the same implementation as production.
+ */
+export { extractCount } from "../server/db.js";
 
-let db: Database | null = null;
+let testDb: Database | null = null;
 
-export async function getDb(): Promise<Database> {
-  if (db) return db;
-
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  const dbPath = path.join(DATA_DIR, "clnode.duckdb");
-  db = await Database.create(dbPath);
-  await initSchema(db);
-  return db;
+export async function getTestDb(): Promise<Database> {
+  if (!testDb) {
+    testDb = await Database.create(":memory:");
+    await initTestSchema(testDb);
+  }
+  return testDb;
 }
 
-async function initSchema(db: Database): Promise<void> {
+export async function closeTestDb(): Promise<void> {
+  if (testDb) {
+    await testDb.close();
+    testDb = null;
+  }
+}
+
+export async function truncateAllTables(db: Database): Promise<void> {
+  // 의존성 역순 삭제
+  await db.run("DELETE FROM activity_log");
+  await db.run("DELETE FROM file_changes");
+  await db.run("DELETE FROM context_entries");
+  await db.run("DELETE FROM task_comments");
+  await db.run("DELETE FROM tasks");
+  await db.run("DELETE FROM agents");
+  await db.run("DELETE FROM sessions");
+  await db.run("DELETE FROM projects");
+}
+
+async function initTestSchema(db: Database): Promise<void> {
+  // db.ts의 스키마 복사
   await db.exec(`
     CREATE SEQUENCE IF NOT EXISTS context_entries_seq START 1;
     CREATE SEQUENCE IF NOT EXISTS file_changes_seq START 1;
@@ -105,26 +123,28 @@ async function initSchema(db: Database): Promise<void> {
       created_at TIMESTAMP DEFAULT now()
     );
   `);
-
-  // Migration: add tags column to existing tasks tables (idempotent)
-  try {
-    await db.exec(`ALTER TABLE tasks ADD COLUMN tags VARCHAR[]`);
-  } catch {
-    // Column already exists — ignore
-  }
 }
 
-export async function closeDb(): Promise<void> {
-  if (db) {
-    await db.close();
-    db = null;
-  }
-}
+// Test fixtures
+export const fixtures = {
+  projectId: "proj-test-001",
+  projectName: "Test Project",
+  projectPath: "/test/path",
+  sessionId: "sess-test-001",
+  sessionId2: "sess-test-002",
+  agentId: "agent-test-001",
+  agentId2: "agent-test-002",
+  parentAgentId: "parent-agent-001",
+};
 
-/**
- * Extract count from DuckDB query result.
- * DuckDB COUNT(*) returns BigInt, which cannot be JSON serialized.
- */
-export function extractCount(result: { count?: number | bigint }[]): number {
-  return Number(result[0]?.count ?? 0);
+// Insert test project and session
+export async function setupTestData(db: Database): Promise<void> {
+  await db.run(
+    `INSERT INTO projects (id, name, path) VALUES (?, ?, ?)`,
+    fixtures.projectId, fixtures.projectName, fixtures.projectPath
+  );
+  await db.run(
+    `INSERT INTO sessions (id, project_id, status) VALUES (?, ?, 'active')`,
+    fixtures.sessionId, fixtures.projectId
+  );
 }

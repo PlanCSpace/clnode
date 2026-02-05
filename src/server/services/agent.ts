@@ -1,4 +1,4 @@
-import { getDb } from "../db.js";
+import { getDb, extractCount } from "../db.js";
 
 export async function startAgent(
   id: string,
@@ -21,6 +21,14 @@ export async function stopAgent(id: string, contextSummary: string | null): Prom
   await db.run(
     `UPDATE agents SET status = 'completed', completed_at = now(), context_summary = ?
      WHERE id = ?`,
+    contextSummary, id
+  );
+}
+
+export async function updateAgentSummary(id: string, contextSummary: string): Promise<void> {
+  const db = await getDb();
+  await db.run(
+    `UPDATE agents SET context_summary = ? WHERE id = ?`,
     contextSummary, id
   );
 }
@@ -51,13 +59,13 @@ export async function getAllAgents() {
 export async function getTotalAgentsCount() {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM agents`);
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function getActiveAgentsCount() {
   const db = await getDb();
   const result = await db.all(`SELECT COUNT(*) as count FROM agents WHERE status = 'active'`);
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function deleteAgent(id: string): Promise<void> {
@@ -98,7 +106,7 @@ export async function getAgentsCountByProject(projectId: string) {
      WHERE sessions.project_id = ?`,
     projectId
   );
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }
 
 export async function getActiveAgentsCountByProject(projectId: string) {
@@ -109,5 +117,5 @@ export async function getActiveAgentsCountByProject(projectId: string) {
      WHERE sessions.project_id = ? AND agents.status = 'active'`,
     projectId
   );
-  return Number(result[0]?.count ?? 0);
+  return extractCount(result);
 }

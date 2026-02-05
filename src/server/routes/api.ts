@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import { getAllSessions, getActiveSessions, getSession, getTotalSessionsCount, getActiveSessionsCount, getSessionsByProject, getActiveSessionsByProject, getSessionsCountByProject, getActiveSessionsCountByProject } from "../services/session.js";
-import { getAllAgents, getActiveAgents, getAgentsBySession, getAgent, stopAgent, getTotalAgentsCount, getActiveAgentsCount, deleteAgent, getAgentsByProject, getActiveAgentsByProject, getAgentsCountByProject, getActiveAgentsCountByProject } from "../services/agent.js";
+import { getAllAgents, getActiveAgents, getAgentsBySession, getAgent, stopAgent, updateAgentSummary, getTotalAgentsCount, getActiveAgentsCount, deleteAgent, getAgentsByProject, getActiveAgentsByProject, getAgentsCountByProject, getActiveAgentsCountByProject } from "../services/agent.js";
 import { getContextBySession, getContextByAgent, getTotalContextEntriesCount, deleteContextByType, getContextEntriesCountByProject } from "../services/context.js";
 import { getFileChangesBySession, getFileChangesByAgent, getTotalFileChangesCount, getFileChangesCountByProject } from "../services/filechange.js";
 import { getAllTasks, getTasksByProject, getTask, createTask, updateTask, deleteTask } from "../services/task.js";
 import { addComment, getCommentsByTask } from "../services/comment.js";
 import { getRecentActivities, getActivitiesBySession, getActivitiesByProject } from "../services/activity.js";
 import { getAllProjects } from "../services/project.js";
+import { broadcast } from "./ws.js";
 
 const api = new Hono();
 
@@ -70,6 +71,8 @@ api.patch("/agents/:id", async (c) => {
   const body = await c.req.json();
   if (body.status === "completed") {
     await stopAgent(id, body.context_summary ?? "Manually stopped via UI");
+  } else if (body.context_summary !== undefined) {
+    await updateAgentSummary(id, body.context_summary);
   }
   return c.json({ ok: true });
 });
@@ -102,6 +105,7 @@ api.post("/tasks", async (c) => {
     status ?? "idea",
     tags ?? null
   );
+  broadcast("task_created", { id, title, status: status ?? "idea", project_id });
   return c.json({ ok: true, id }, 201);
 });
 
@@ -120,6 +124,7 @@ api.patch("/tasks/:id", async (c) => {
       `Status changed: ${(oldTask as any).status} → ${body.status}`);
   }
 
+  broadcast("task_updated", { id, ...body });
   return c.json({ ok: true });
 });
 
@@ -127,6 +132,7 @@ api.delete("/tasks/:id", async (c) => {
   const id = parseInt(c.req.param("id"), 10);
   const deleted = await deleteTask(id);
   if (!deleted) return c.json({ error: "not found" }, 404);
+  broadcast("task_deleted", { id });
   return c.json({ ok: true });
 });
 
