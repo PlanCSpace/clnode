@@ -335,10 +335,10 @@ Claude Code does NOT send `context_summary` or `result` in SubagentStop. Actual 
 - [x] API error handling — res.ok check, .catch() on all calls, useCallback+debounce
 - [x] Korean user guide — docs/GUIDE.md with 5 screenshots
 - [x] README — hero screenshots, title/tagline, Quick Start
+- [x] Server-side project filtering — `?project_id=X` query param for sessions/agents/activities/stats API
 
 ## Next Steps
 
 ### Remaining Work
 - npm publish (`npm publish` when ready for public release)
-- Server-side project filtering for sessions/agents API (currently client-side only)
 - Test suite

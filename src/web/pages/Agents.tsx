@@ -13,6 +13,7 @@ export default function Agents() {
   const [agentsBySession, setAgentsBySession] = useState<Record<string, Agent[]>>({});
   const [filter, setFilter] = useState<Filter>("all");
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
   const { events, reconnectCount } = useWebSocket();
   const { selected: projectId } = useProject();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -71,18 +72,32 @@ export default function Agents() {
         {visibleSessions.length === 0 && <p className="text-zinc-600 text-sm">No agents found</p>}
         {visibleSessions.map((session) => {
           const agents = filterAgents(agentsBySession[session.id] ?? []);
+          const isCollapsed = collapsedSessions.has(session.id);
+          const toggleSession = () => {
+            setCollapsedSessions((prev) => {
+              const next = new Set(prev);
+              if (next.has(session.id)) next.delete(session.id);
+              else next.add(session.id);
+              return next;
+            });
+          };
           return (
             <div key={session.id} className="space-y-1">
-              <div className="flex items-center gap-2 px-1">
+              <div
+                className="flex items-center gap-2 px-1 cursor-pointer hover:bg-zinc-800/30 rounded-lg py-1 -my-1 transition-colors"
+                onClick={toggleSession}
+              >
+                <span className={`text-zinc-500 text-xs transition-transform ${isCollapsed ? "" : "rotate-90"}`}>▶</span>
                 <Badge variant={statusVariant(session.status)} dot>{session.status}</Badge>
                 <span className="text-xs font-mono text-zinc-400">{session.id.slice(0, 12)}</span>
                 {session.project_id && <span className="text-xs text-zinc-500">{session.project_id}</span>}
                 <span className="text-xs text-zinc-600">{formatDateTime(session.started_at)}</span>
+                <span className="text-xs text-zinc-600 ml-auto">{agents.length} agents</span>
               </div>
-              {agents.map((agent, i) => {
+              {!isCollapsed && agents.map((agent, i) => {
                 const isExpanded = expandedAgent === agent.id;
                 return (
-                  <div key={agent.id} className="flex items-start gap-2 ml-3">
+                  <div key={agent.id} className="flex items-start gap-2 ml-5">
                     <span className="text-zinc-600 text-sm mt-3 shrink-0">{i === agents.length - 1 ? "└─" : "├─"}</span>
                     <Card className="flex-1 cursor-pointer" hover>
                       <div onClick={() => setExpandedAgent(isExpanded ? null : agent.id)}>
