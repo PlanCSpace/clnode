@@ -123,6 +123,12 @@ export default function Agents() {
                         <div className="text-xs text-zinc-500 mt-1 flex gap-3">
                           <span>id: {agent.id.slice(0, 12)}</span>
                           {agent.completed_at && <span>completed: {formatTime(agent.completed_at)}</span>}
+                          {(agent.input_tokens > 0 || agent.output_tokens > 0) && (
+                            <span className="text-amber-500">
+                              {((agent.input_tokens + agent.output_tokens) / 1000).toFixed(1)}K tokens
+                              <span className="text-zinc-600 ml-1">(in: {(agent.input_tokens / 1000).toFixed(1)}K / out: {(agent.output_tokens / 1000).toFixed(1)}K)</span>
+                            </span>
+                          )}
                         </div>
                         {!isExpanded && agent.context_summary && (
                           <div className="mt-2 text-xs text-zinc-400 bg-zinc-800/50 rounded-lg p-2 line-clamp-2">

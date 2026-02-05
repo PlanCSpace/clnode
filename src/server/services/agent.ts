@@ -16,12 +16,22 @@ export async function startAgent(
   );
 }
 
-export async function stopAgent(id: string, contextSummary: string | null): Promise<void> {
+export async function stopAgent(
+  id: string,
+  contextSummary: string | null,
+  inputTokens?: number,
+  outputTokens?: number
+): Promise<void> {
   const db = await getDb();
   await db.run(
-    `UPDATE agents SET status = 'completed', completed_at = now(), context_summary = ?
+    `UPDATE agents SET
+       status = 'completed',
+       completed_at = now(),
+       context_summary = ?,
+       input_tokens = COALESCE(?, input_tokens),
+       output_tokens = COALESCE(?, output_tokens)
      WHERE id = ?`,
-    contextSummary, id
+    contextSummary, inputTokens ?? null, outputTokens ?? null, id
   );
 }
 

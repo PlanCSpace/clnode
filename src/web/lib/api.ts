@@ -55,6 +55,8 @@ export interface Agent {
   started_at: string;
   completed_at: string | null;
   context_summary: string | null;
+  input_tokens: number;
+  output_tokens: number;
 }
 
 export interface ContextEntry {
@@ -113,6 +115,37 @@ export interface Activity {
   event_type: string;
   details: string;
   created_at: string;
+}
+
+export interface DailyActivity {
+  date: string;
+  messageCount: number;
+  sessionCount: number;
+  toolCallCount: number;
+}
+
+export interface AgentContextSize {
+  id: string;
+  agent_name: string;
+  agent_type: string | null;
+  context_length: number;
+  session_id: string;
+}
+
+export interface AgentTokenUsage {
+  id: string;
+  agent_name: string;
+  agent_type: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  session_id: string;
+}
+
+export interface TotalTokenUsage {
+  input: number;
+  output: number;
+  total: number;
 }
 
 /** DuckDB now() stores local time but JSON serializes with 'Z' suffix.
@@ -178,4 +211,11 @@ export const api = {
     return get<Activity[]>(`/activities${qs ? `?${qs}` : ""}`);
   },
   stats: (projectId?: string) => get<Stats>(`/stats${projectId ? `?project_id=${projectId}` : ""}`),
+  // Usage analytics
+  usageDaily: (days?: number) => get<DailyActivity[]>(`/usage/daily${days ? `?days=${days}` : ""}`),
+  usageWeekly: () => get<{ messages: number; sessions: number; toolCalls: number }>("/usage/weekly"),
+  usageContextSizes: (projectId?: string) => get<AgentContextSize[]>(`/usage/context-sizes${projectId ? `?project_id=${projectId}` : ""}`),
+  usageTotalContext: (projectId?: string) => get<{ total: number }>(`/usage/total-context${projectId ? `?project_id=${projectId}` : ""}`),
+  usageTokens: (projectId?: string) => get<AgentTokenUsage[]>(`/usage/tokens${projectId ? `?project_id=${projectId}` : ""}`),
+  usageTotalTokens: (projectId?: string) => get<TotalTokenUsage>(`/usage/total-tokens${projectId ? `?project_id=${projectId}` : ""}`),
 };

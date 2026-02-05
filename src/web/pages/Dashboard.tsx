@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { api, type Session, type Agent, type Activity, type Task, type Stats, formatTime } from "../lib/api";
+import { api, type Session, type Agent, type Activity, type Task, type Stats, type DailyActivity, type AgentContextSize, type AgentTokenUsage, type TotalTokenUsage, formatTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
 import { useProject } from "../lib/ProjectContext";
 import { Card } from "../components/Card";
 import { Badge, type Variant } from "../components/Badge";
 import { BarChart } from "../components/Chart";
-import { RiTerminalBoxLine, RiRobot2Line, RiDatabase2Line, RiFileEditLine, RiPulseLine, RiTaskLine } from "react-icons/ri";
+import { RiTerminalBoxLine, RiRobot2Line, RiDatabase2Line, RiFileEditLine, RiPulseLine, RiTaskLine, RiBarChartLine, RiTimeLine, RiCoinLine } from "react-icons/ri";
 
 export default function Dashboard() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -14,6 +14,10 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [dailyActivity, setDailyActivity] = useState<DailyActivity[]>([]);
+  const [contextSizes, setContextSizes] = useState<AgentContextSize[]>([]);
+  const [tokenUsage, setTokenUsage] = useState<AgentTokenUsage[]>([]);
+  const [totalTokens, setTotalTokens] = useState<TotalTokenUsage | null>(null);
   const { connected, events, reconnectCount } = useWebSocket();
   const { selected: projectId } = useProject();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -27,13 +31,21 @@ export default function Dashboard() {
       api.activities(50, pid),
       api.stats(pid),
       api.tasks(pid),
-    ]).then(([s, a, allA, act, st, t]) => {
+      api.usageDaily(7),
+      api.usageContextSizes(pid),
+      api.usageTokens(pid),
+      api.usageTotalTokens(pid),
+    ]).then(([s, a, allA, act, st, t, daily, ctx, tok, totTok]) => {
       setSessions(s);
       setAgents(a);
       setAllAgents(allA);
       setActivities(act);
       setStats(st);
       setTasks(t);
+      setDailyActivity(daily);
+      setContextSizes(ctx);
+      setTokenUsage(tok);
+      setTotalTokens(totTok);
     }).catch(() => {});
   }, [projectId]);
 
@@ -77,6 +89,47 @@ export default function Dashboard() {
     .sort((a, b) => b[1] - a[1])
     .map(([label, value]) => ({ label, value, color: EVENT_COLORS[label] || "bg-zinc-500" }));
 
+  // Daily activity chart (messages per day)
+  const dailyActivityData = [...dailyActivity]
+    .reverse()
+    .map((d) => ({
+      label: d.date.slice(5), // MM-DD
+      value: d.messageCount,
+      color: "bg-cyan-500",
+    }));
+
+  // Context sizes chart (top agents by context length)
+  const contextSizeData = contextSizes
+    .filter((c) => c.context_length > 0)
+    .slice(0, 8)
+    .map((c) => ({
+      label: c.agent_type || c.agent_name || c.id.slice(0, 8),
+      value: Math.round(c.context_length / 100) * 100, // Round to nearest 100
+      color: "bg-purple-500",
+    }));
+
+  // Token usage chart (top agents by total tokens)
+  const tokenUsageData = tokenUsage
+    .filter((t) => t.total_tokens > 0)
+    .slice(0, 8)
+    .map((t) => ({
+      label: t.agent_type || t.agent_name || t.id.slice(0, 8),
+      value: t.total_tokens,
+      color: "bg-amber-500",
+    }));
+
+  // Calculate totals for stats
+  const weeklyMessages = dailyActivity.reduce((sum, d) => sum + d.messageCount, 0);
+  const totalContextChars = contextSizes.reduce((sum, c) => sum + c.context_length, 0);
+  const totalTokenCount = totalTokens?.total ?? 0;
+
+  // Format token count with K/M suffix
+  const formatTokens = (n: number) => {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+    return String(n);
+  };
+
   const statCards = [
     { label: "Active Sessions", value: sessions.length, sub: stats ? `/ ${stats.total_sessions} total` : undefined, icon: RiTerminalBoxLine },
     { label: "Active Agents", value: agents.length, sub: stats ? `/ ${stats.total_agents} total` : undefined, icon: RiRobot2Line },
@@ -84,6 +137,8 @@ export default function Dashboard() {
     { label: "File Changes", value: stats?.total_file_changes ?? 0, icon: RiFileEditLine },
     { label: "Live Events", value: events.length, icon: RiPulseLine },
     { label: "Tasks", value: tasks.length, icon: RiTaskLine, sub: projectId ? "this project" : "all projects" },
+    { label: "Weekly Messages", value: weeklyMessages, icon: RiTimeLine, sub: "last 7 days" },
+    { label: "Total Tokens", value: formatTokens(totalTokenCount), icon: RiCoinLine, sub: totalTokens ? `in: ${formatTokens(totalTokens.input)} / out: ${formatTokens(totalTokens.output)}` : undefined },
   ];
 
   return (
@@ -93,7 +148,7 @@ export default function Dashboard() {
         <Badge variant={connected ? "success" : "danger"} dot>{connected ? "LIVE" : "DISCONNECTED"}</Badge>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         {statCards.map((s) => (
           <Card key={s.label}>
             <div className="flex items-start justify-between">
@@ -112,11 +167,27 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 gap-6">
         <Card>
+          <BarChart data={dailyActivityData} title="Daily Messages (Last 7 Days)" />
+        </Card>
+        <Card>
+          <BarChart data={tokenUsageData} title="Agent Token Usage" />
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
           <BarChart data={agentTypeData} title="Agent Types" />
         </Card>
         <Card>
           <BarChart data={activityTypeData} title="Recent Activity Breakdown" />
         </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
+          <BarChart data={contextSizeData} title="Agent Context Sizes (chars)" />
+        </Card>
+        <div />
       </div>
 
       <div className="grid grid-cols-2 gap-6">

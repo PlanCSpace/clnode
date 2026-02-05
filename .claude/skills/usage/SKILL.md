@@ -2,6 +2,7 @@
 name: usage
 description: Analyze token usage and daily activity statistics. Use to check session token consumption, compare agent usage, or monitor weekly activity trends.
 version: 1.0.0
+model: haiku
 ---
 
 # Usage Analytics

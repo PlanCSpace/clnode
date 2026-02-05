@@ -11,26 +11,59 @@ import { findPendingTaskForAgent, getInProgressTasksForAgent, updateTask } from 
 import { addComment } from "../services/comment.js";
 import { broadcast } from "./ws.js";
 
-/** Extract the last assistant text from a Claude Code agent transcript JSONL */
-async function extractSummaryFromTranscript(transcriptPath: string): Promise<string | null> {
+interface TranscriptUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens: number;
+  cache_creation_input_tokens: number;
+}
+
+interface TranscriptExtraction {
+  summary: string | null;
+  usage: TranscriptUsage;
+}
+
+/** Extract summary and token usage from a Claude Code agent transcript JSONL */
+async function extractFromTranscript(transcriptPath: string): Promise<TranscriptExtraction> {
+  const result: TranscriptExtraction = {
+    summary: null,
+    usage: { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+  };
+
   // Brief delay to let Claude Code finish writing the transcript
   await new Promise(r => setTimeout(r, 500));
+
   try {
     const content = await readFile(transcriptPath, "utf-8");
     const lines = content.trim().split("\n");
-    // Walk backwards to find the last assistant message with text content
+
     for (let i = lines.length - 1; i >= 0; i--) {
       const entry = JSON.parse(lines[i]);
-      if (entry.type !== "assistant" || !entry.message?.content) continue;
-      const textParts = entry.message.content
-        .filter((c: { type: string }) => c.type === "text")
-        .map((c: { text: string }) => c.text);
-      if (textParts.length > 0) return textParts.join("\n");
+
+      // Extract summary from last assistant text
+      if (!result.summary && entry.type === "assistant" && entry.message?.content) {
+        const textParts = entry.message.content
+          .filter((c: { type: string }) => c.type === "text")
+          .map((c: { text: string }) => c.text);
+        if (textParts.length > 0) {
+          result.summary = textParts.join("\n");
+        }
+      }
+
+      // Sum up token usage from all assistant messages
+      if (entry.type === "assistant" && entry.message?.usage) {
+        const usage = entry.message.usage;
+        result.usage.input_tokens += Number(usage.input_tokens ?? 0);
+        result.usage.output_tokens += Number(usage.output_tokens ?? 0);
+        result.usage.cache_read_input_tokens += Number(usage.cache_read_input_tokens ?? 0);
+        result.usage.cache_creation_input_tokens += Number(usage.cache_creation_input_tokens ?? 0);
+      }
     }
-    return null;
   } catch {
-    return null;
+    // Ignore errors
   }
+
+  return result;
 }
 
 const hooks = new Hono();
@@ -100,14 +133,23 @@ hooks.post("/:event", async (c) => {
         const agentTranscriptPath = body.agent_transcript_path ?? null;
         // Claude Code doesn't send context_summary — extract from transcript
         let contextSummary = body.context_summary ?? body.result ?? null;
-        if (!contextSummary && agentTranscriptPath) {
-          contextSummary = await extractSummaryFromTranscript(agentTranscriptPath);
+        let inputTokens = 0;
+        let outputTokens = 0;
+
+        if (agentTranscriptPath) {
+          const extraction = await extractFromTranscript(agentTranscriptPath);
+          if (!contextSummary && extraction.summary) {
+            contextSummary = extraction.summary;
+          }
+          inputTokens = extraction.usage.input_tokens + extraction.usage.cache_read_input_tokens;
+          outputTokens = extraction.usage.output_tokens;
         }
+
         if (agentId) {
           const agent = await getAgent(agentId);
           const agentName = agent?.agent_name ?? body.agent_type ?? "unknown";
 
-          await stopAgent(agentId, contextSummary);
+          await stopAgent(agentId, contextSummary, inputTokens, outputTokens);
           if (contextSummary) {
             await addContextEntry(sessionId, agentId, "agent_summary", contextSummary, ["auto", agentName]);
           }
@@ -137,8 +179,16 @@ hooks.post("/:event", async (c) => {
           await logActivity(sessionId, agentId, "SubagentStop", {
             context_summary: contextSummary,
             incomplete_tasks: warning ? true : false,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
           });
-          broadcast("SubagentStop", { session_id: sessionId, agent_id: agentId, incomplete_tasks: !!warning });
+          broadcast("SubagentStop", {
+            session_id: sessionId,
+            agent_id: agentId,
+            incomplete_tasks: !!warning,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+          });
         }
         return c.json({});
       }

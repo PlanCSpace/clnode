@@ -7,6 +7,7 @@ import { getAllTasks, getTasksByProject, getTask, createTask, updateTask, delete
 import { addComment, getCommentsByTask } from "../services/comment.js";
 import { getRecentActivities, getActivitiesBySession, getActivitiesByProject } from "../services/activity.js";
 import { getAllProjects } from "../services/project.js";
+import { getDailyActivity, getWeeklyTotals, getAgentContextSizes, getTotalContextSize, getAgentTokenUsage, getTotalTokenUsage } from "../services/usage.js";
 import { broadcast } from "./ws.js";
 
 const api = new Hono();
@@ -214,6 +215,36 @@ api.get("/stats", async (c) => {
     total_context_entries,
     total_file_changes
   });
+});
+
+// Usage analytics endpoints
+api.get("/usage/daily", async (c) => {
+  const days = parseInt(c.req.query("days") ?? "7", 10);
+  return c.json(await getDailyActivity(days));
+});
+
+api.get("/usage/weekly", async (c) => {
+  return c.json(await getWeeklyTotals());
+});
+
+api.get("/usage/context-sizes", async (c) => {
+  const projectId = c.req.query("project_id");
+  return c.json(await getAgentContextSizes(projectId ?? undefined));
+});
+
+api.get("/usage/total-context", async (c) => {
+  const projectId = c.req.query("project_id");
+  return c.json({ total: await getTotalContextSize(projectId ?? undefined) });
+});
+
+api.get("/usage/tokens", async (c) => {
+  const projectId = c.req.query("project_id");
+  return c.json(await getAgentTokenUsage(projectId ?? undefined));
+});
+
+api.get("/usage/total-tokens", async (c) => {
+  const projectId = c.req.query("project_id");
+  return c.json(await getTotalTokenUsage(projectId ?? undefined));
 });
 
 export default api;
