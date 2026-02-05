@@ -121,12 +121,15 @@ program
 // clnode init [path]
 program
   .command("init [targetPath]")
-  .description("Install lifecycle hooks in the target project")
-  .option("-s, --with-skills", "Copy agent skill templates to .claude/skills/")
-  .action(async (targetPath: string | undefined, opts: { withSkills?: boolean }) => {
+  .description("Install lifecycle hooks and templates in the target project")
+  .option("-p, --port <port>", "Daemon port (default: 3100)", String(CLNODE_PORT))
+  .option("--hooks-only", "Install hooks only, skip agent/skill/rule templates")
+  .action(async (targetPath: string | undefined, opts: { port?: string; hooksOnly?: boolean }) => {
     const target = targetPath ? path.resolve(targetPath) : process.cwd();
     const projectName = path.basename(target);
     const projectId = projectName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    const port = opts.port ?? String(CLNODE_PORT);
+    const portUrl = `http://localhost:${port}`;
 
     const baseDir = import.meta.dirname ?? path.dirname(new URL(import.meta.url).pathname);
     // hook.sh lives in src/hooks/ (included in npm package via files field)
@@ -136,9 +139,14 @@ program
     const claudeDir = path.join(target, ".claude");
     fs.mkdirSync(claudeDir, { recursive: true });
 
+    // Build hook command with port env var if non-default
+    const hookCommand = port === "3100"
+      ? hookScript
+      : `CLNODE_PORT=${port} ${hookScript}`;
+
     const templatePath = path.resolve(baseDir, "../../templates/hooks-config.json");
     const templateRaw = fs.readFileSync(templatePath, "utf-8");
-    const hooksConfig = JSON.parse(templateRaw.replaceAll("HOOK_SCRIPT_PATH", hookScript));
+    const hooksConfig = JSON.parse(templateRaw.replaceAll("HOOK_SCRIPT_PATH", hookCommand));
 
     const settingsPath = path.join(claudeDir, "settings.local.json");
     let settings: Record<string, unknown> = {};
@@ -150,8 +158,8 @@ program
     console.log(`[clnode] Hooks installed to ${settingsPath}`);
     console.log(`[clnode] hook.sh path: ${hookScript}`);
 
-    // Copy skill and agent templates if requested
-    if (opts.withSkills) {
+    // Copy skill/agent/rule templates by default (skip with --hooks-only)
+    if (!opts.hooksOnly) {
       const skillsSourceDir = path.resolve(baseDir, "../../templates/skills");
       const skillsTargetDir = path.join(claudeDir, "skills");
 
@@ -212,24 +220,57 @@ program
       }
     }
 
+    // Auto-start daemon if not running
+    let daemonRunning = false;
     try {
-      await fetch(`${CLNODE_URL}/api/health`);
-      const res = await fetch(`${CLNODE_URL}/hooks/RegisterProject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, project_name: projectName, project_path: target }),
-      });
-      if (res.ok) {
-        console.log(`[clnode] Project registered: ${projectId} (${target})`);
-      }
+      await fetch(`${portUrl}/api/health`);
+      daemonRunning = true;
     } catch {
-      console.log(`[clnode] Daemon not running — project will be registered on first hook event`);
+      console.log(`[clnode] Daemon not running on port ${port}, starting...`);
+      // Start daemon with specified port
+      const serverEntry = path.resolve(baseDir, "../server/index.js");
+      const isTs = serverEntry.endsWith(".ts");
+      const cmd = isTs ? "tsx" : "node";
+      const env = { ...process.env, CLNODE_PORT: port };
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      const logFd = fs.openSync(LOG_FILE, "a");
+      const child = spawn(cmd, [serverEntry], {
+        env,
+        detached: true,
+        stdio: ["ignore", logFd, logFd],
+      });
+      fs.closeSync(logFd);
+      child.unref();
+      if (child.pid) {
+        fs.writeFileSync(PID_FILE, String(child.pid));
+        console.log(`[clnode] Daemon started (PID: ${child.pid}, Port: ${port})`);
+        daemonRunning = true;
+        // Wait a bit for daemon to initialize
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    // Register project
+    if (daemonRunning) {
+      try {
+        const res = await fetch(`${portUrl}/hooks/RegisterProject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ project_id: projectId, project_name: projectName, project_path: target }),
+        });
+        if (res.ok) {
+          console.log(`[clnode] Project registered: ${projectId} (${target})`);
+        }
+      } catch {
+        console.log(`[clnode] Could not register project — will be registered on first hook event`);
+      }
     }
 
     console.log(`\n[clnode] Setup complete!`);
-    console.log(`[clnode] Next steps:`);
-    console.log(`  1. Start the daemon: clnode start`);
-    console.log(`  2. Restart your Claude Code session (hooks activate on session start)`);
+    console.log(`[clnode] Restart your Claude Code session to activate hooks.`);
+    if (port !== "3100") {
+      console.log(`[clnode] Using custom port: ${port}`);
+    }
   });
 
 // clnode logs

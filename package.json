@@ -28,6 +28,7 @@
     "build": "tsc && vite build",
     "build:server": "tsc",
     "build:web": "vite build",
+    "postinstall": "npm rebuild duckdb 2>/dev/null || true",
     "prepublishOnly": "pnpm build",
     "start": "node dist/server/index.js",
     "cli": "node dist/cli/index.js",
