@@ -14,11 +14,22 @@ npx clnode init .
 
 이 명령어 하나로:
 - hooks 설정 (에이전트 간 컨텍스트 공유)
-- agents 템플릿 복사 (node-backend, react-frontend, reviewer 등)
 - skills 템플릿 복사 (compress-context, session-usage)
-- rules 템플릿 복사 (team workflow 규칙)
+- clnode-usage 규칙 복사 (범용 사용법)
 - 데몬 자동 시작 (localhost:3100)
 - 프로젝트 등록
+
+**옵션:**
+```bash
+# 기본 (권장) - hooks + skills + 범용 규칙
+npx clnode init .
+
+# clnode 개발용 - 추가로 agents, team.md 포함
+npx clnode init . --with-agents
+
+# hooks만 설치
+npx clnode init . --hooks-only
+```
 
 ### 2. 확인
 
@@ -48,7 +59,22 @@ npx clnode init .
 
 ## 설치된 템플릿
 
-### Agents (`.claude/agents/`)
+### 기본 설치 (모든 프로젝트용)
+
+**Skills (`.claude/skills/`)**
+| 스킬 | 용도 |
+|------|------|
+| compress-context | 긴 에이전트 컨텍스트 압축 |
+| session-usage | 세션 토큰 사용량 분석 |
+
+**Rules (`.claude/rules/`)**
+| 규칙 | 내용 |
+|------|------|
+| clnode-usage.md | clnode 기능 사용법, 컨텍스트 압축 규칙 |
+
+### --with-agents 옵션 (clnode 개발용)
+
+**Agents (`.claude/agents/`)**
 | 에이전트 | 역할 |
 |----------|------|
 | node-backend | Hono 서버, DuckDB, 서비스 레이어 |
@@ -56,13 +82,7 @@ npx clnode init .
 | cli-hooks | CLI, hook.sh, 템플릿 |
 | reviewer | 코드 리뷰 (전 도메인) |
 
-### Skills (`.claude/skills/`)
-| 스킬 | 용도 |
-|------|------|
-| compress-context | 긴 에이전트 컨텍스트 압축 |
-| session-usage | 세션 토큰 사용량 분석 |
-
-### Rules (`.claude/rules/`)
+**추가 Rules**
 | 규칙 | 내용 |
 |------|------|
 | team.md | 팀 워크플로우, 리뷰 프로토콜 |
