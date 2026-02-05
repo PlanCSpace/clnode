@@ -53,8 +53,11 @@ Tell the user:
 After restart, tell the user to try one of these:
 
 1. **Check status**: Ask "clnode 상태 확인해줘" or run `npx clnode status`
-2. **Test worker agent**: Ask "worker 에이전트로 간단한 작업 해줘"
-3. **Open Web UI**: Run `npx clnode ui` to see the dashboard
+2. **Test worker agent**:
+   ```
+   worker 에이전트로 CLAUDE.md 만들어줘. 이 프로젝트에서 사용 가능한 clnode 에이전트(reviewer, worker)와 스킬(/compress-context, /session-usage, /clnode-agents) 설명을 작성해줘.
+   ```
+3. **Open Web UI**: Run `npx clnode ui` to see the dashboard and spawned agents
 
 If any of these work, clnode is installed correctly!
 
