@@ -124,6 +124,52 @@ clnode logs [-f]          # 데몬 로그 보기/팔로우
 - **jq** — `brew install jq` / `apt install jq`
 - **curl** — 대부분의 시스템에 기본 설치
 
+## 문제 해결
+
+### DuckDB 바인딩 오류
+
+```
+Error: Cannot find module '.../duckdb/lib/binding/duckdb.node'
+```
+
+DuckDB는 플랫폼별 네이티브 바인딩이 필요합니다.
+
+**로컬 설치:**
+```bash
+pnpm rebuild duckdb
+# 또는
+npm rebuild duckdb
+```
+
+**Docker:** Dockerfile에 빌드 도구 추가 후 리빌드:
+```dockerfile
+# Alpine
+RUN apk add --no-cache python3 make g++
+
+# Debian/Ubuntu
+RUN apt-get update && apt-get install -y python3 make g++
+
+# 의존성 설치 후 리빌드
+RUN pnpm rebuild duckdb
+```
+
+**Docker 볼륨 마운트 시:** 호스트의 node_modules 제외:
+```yaml
+# docker-compose.yml
+volumes:
+  - .:/app
+  - /app/node_modules  # 호스트 대신 컨테이너의 node_modules 사용
+```
+
+### clnode 명령어 찾을 수 없음
+
+`pnpm install` 후 CLI를 전역으로 링크:
+```bash
+pnpm link --global
+# 또는 직접 실행
+node dist/cli/index.js start
+```
+
 ## 아키텍처
 
 ```

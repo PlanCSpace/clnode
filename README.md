@@ -124,6 +124,52 @@ clnode logs [-f]          # View/follow daemon logs
 - **jq** — `brew install jq` / `apt install jq`
 - **curl** — pre-installed on most systems
 
+## Troubleshooting
+
+### DuckDB binding error
+
+```
+Error: Cannot find module '.../duckdb/lib/binding/duckdb.node'
+```
+
+DuckDB requires native bindings compiled for your platform.
+
+**Local install:**
+```bash
+pnpm rebuild duckdb
+# or
+npm rebuild duckdb
+```
+
+**Docker:** Add build tools and rebuild in your Dockerfile:
+```dockerfile
+# Alpine
+RUN apk add --no-cache python3 make g++
+
+# Debian/Ubuntu
+RUN apt-get update && apt-get install -y python3 make g++
+
+# Rebuild after dependencies installed
+RUN pnpm rebuild duckdb
+```
+
+**Docker with volume mounts:** Exclude node_modules from host:
+```yaml
+# docker-compose.yml
+volumes:
+  - .:/app
+  - /app/node_modules  # Use container's node_modules, not host's
+```
+
+### Command not found: clnode
+
+After `pnpm install`, link the CLI globally:
+```bash
+pnpm link --global
+# or run directly
+node dist/cli/index.js start
+```
+
 ## Architecture
 
 ```
