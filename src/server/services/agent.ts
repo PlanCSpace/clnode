@@ -67,3 +67,47 @@ export async function deleteAgent(id: string): Promise<void> {
   await db.run(`DELETE FROM file_changes WHERE agent_id = ?`, id);
   await db.run(`DELETE FROM agents WHERE id = ?`, id);
 }
+
+export async function getAgentsByProject(projectId: string) {
+  const db = await getDb();
+  return db.all(
+    `SELECT agents.* FROM agents
+     JOIN sessions ON agents.session_id = sessions.id
+     WHERE sessions.project_id = ?
+     ORDER BY agents.started_at DESC`,
+    projectId
+  );
+}
+
+export async function getActiveAgentsByProject(projectId: string) {
+  const db = await getDb();
+  return db.all(
+    `SELECT agents.* FROM agents
+     JOIN sessions ON agents.session_id = sessions.id
+     WHERE sessions.project_id = ? AND agents.status = 'active'
+     ORDER BY agents.started_at DESC`,
+    projectId
+  );
+}
+
+export async function getAgentsCountByProject(projectId: string) {
+  const db = await getDb();
+  const result = await db.all(
+    `SELECT COUNT(*) as count FROM agents
+     JOIN sessions ON agents.session_id = sessions.id
+     WHERE sessions.project_id = ?`,
+    projectId
+  );
+  return Number(result[0]?.count ?? 0);
+}
+
+export async function getActiveAgentsCountByProject(projectId: string) {
+  const db = await getDb();
+  const result = await db.all(
+    `SELECT COUNT(*) as count FROM agents
+     JOIN sessions ON agents.session_id = sessions.id
+     WHERE sessions.project_id = ? AND agents.status = 'active'`,
+    projectId
+  );
+  return Number(result[0]?.count ?? 0);
+}

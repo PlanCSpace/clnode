@@ -323,11 +323,22 @@ Claude Code does NOT send `context_summary` or `result` in SubagentStop. Actual 
 - **True parallelism requires same-message Task calls**: separate messages = sequential execution.
 - **clnode's sweet spot**: multi-step chains where Agent B needs Agent A's results (context relay), not embarrassingly parallel work.
 
+## Phase 5 Status: Complete
+- [x] `npm pack` dry-run — 93 files, 136.6KB, docs/screenshots excluded
+- [x] `clnode logs` CLI command — `-n` (lines) + `-f` (follow) options
+- [x] Skill rules — `templates/rules/swarm-context.md` (decision/blocker/handoff entry types)
+- [x] Supabase-style UI renewal — zinc+emerald dark theme, react-icons, Card/Badge components
+- [x] Agent detail view — context/files tabs with loaded flags
+- [x] Dashboard charts — agent types + activity breakdown bar charts
+- [x] Kanban drag-and-drop — HTML5 DnD API, 5-stage board
+- [x] Project filter — useProject() hook connected to all pages
+- [x] API error handling — res.ok check, .catch() on all calls, useCallback+debounce
+- [x] Korean user guide — docs/GUIDE.md with 5 screenshots
+- [x] README — hero screenshots, title/tagline, Quick Start
+
 ## Next Steps
 
 ### Remaining Work
-- npm publish dry-run (`npm pack` to verify package contents)
-- Consider adding `clnode logs` CLI command for daemon log tailing
-- Skill rules for structured context entries (`decision`, `blocker`, `handoff` entry types)
+- npm publish (`npm publish` when ready for public release)
 - Server-side project filtering for sessions/agents API (currently client-side only)
-- Dashboard: debounce could be configurable or use SSE instead of polling
+- Test suite

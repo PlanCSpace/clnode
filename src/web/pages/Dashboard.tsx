@@ -19,18 +19,17 @@ export default function Dashboard() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const loadData = useCallback(() => {
+    const pid = projectId ?? undefined;
     Promise.all([
-      api.sessions(true),
-      api.agents(true),
-      api.agents(),
-      api.activities(50),
-      api.stats(),
-      api.tasks(projectId ?? undefined),
+      api.sessions(true, pid),
+      api.agents(true, pid),
+      api.agents(false, pid),
+      api.activities(50, pid),
+      api.stats(pid),
+      api.tasks(pid),
     ]).then(([s, a, allA, act, st, t]) => {
-      const filterByProject = <T extends { session_id?: string; project_id?: string | null }>(items: T[]) =>
-        projectId ? items.filter(i => i.project_id === projectId) : items;
-      setSessions(filterByProject(s));
-      setAgents(filterByProject(a as (Agent & { project_id?: string | null })[]));
+      setSessions(s);
+      setAgents(a);
       setAllAgents(allA);
       setActivities(act);
       setStats(st);

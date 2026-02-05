@@ -35,3 +35,14 @@ export async function getTotalFileChangesCount() {
   const result = await db.all(`SELECT COUNT(*) as count FROM file_changes`);
   return Number(result[0]?.count ?? 0);
 }
+
+export async function getFileChangesCountByProject(projectId: string) {
+  const db = await getDb();
+  const result = await db.all(
+    `SELECT COUNT(*) as count FROM file_changes
+     JOIN sessions ON file_changes.session_id = sessions.id
+     WHERE sessions.project_id = ?`,
+    projectId
+  );
+  return Number(result[0]?.count ?? 0);
+}

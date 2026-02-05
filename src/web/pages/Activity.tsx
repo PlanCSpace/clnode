@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { api, type Activity as ActivityType, type FileChange, formatTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
+import { useProject } from "../lib/ProjectContext";
 import { Badge, type Variant } from "../components/Badge";
 
 const EVENT_TYPES = [
@@ -15,11 +16,12 @@ export default function Activity() {
   const [subagentOnly, setSubagentOnly] = useState(false);
   const [tab, setTab] = useState<"log" | "files">("log");
   const { events, connected } = useWebSocket();
+  const { selected: projectId } = useProject();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const loadActivities = useCallback(() => {
-    api.activities(100).then(setActivities).catch(() => {});
-  }, []);
+    api.activities(100, projectId ?? undefined).then(setActivities).catch(() => {});
+  }, [projectId]);
 
   useEffect(() => { loadActivities(); }, [loadActivities]);
 

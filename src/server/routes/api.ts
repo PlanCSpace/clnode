@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { getAllSessions, getActiveSessions, getSession, getTotalSessionsCount, getActiveSessionsCount } from "../services/session.js";
-import { getAllAgents, getActiveAgents, getAgentsBySession, getAgent, stopAgent, getTotalAgentsCount, getActiveAgentsCount, deleteAgent } from "../services/agent.js";
-import { getContextBySession, getContextByAgent, getTotalContextEntriesCount, deleteContextByType } from "../services/context.js";
-import { getFileChangesBySession, getFileChangesByAgent, getTotalFileChangesCount } from "../services/filechange.js";
+import { getAllSessions, getActiveSessions, getSession, getTotalSessionsCount, getActiveSessionsCount, getSessionsByProject, getActiveSessionsByProject, getSessionsCountByProject, getActiveSessionsCountByProject } from "../services/session.js";
+import { getAllAgents, getActiveAgents, getAgentsBySession, getAgent, stopAgent, getTotalAgentsCount, getActiveAgentsCount, deleteAgent, getAgentsByProject, getActiveAgentsByProject, getAgentsCountByProject, getActiveAgentsCountByProject } from "../services/agent.js";
+import { getContextBySession, getContextByAgent, getTotalContextEntriesCount, deleteContextByType, getContextEntriesCountByProject } from "../services/context.js";
+import { getFileChangesBySession, getFileChangesByAgent, getTotalFileChangesCount, getFileChangesCountByProject } from "../services/filechange.js";
 import { getAllTasks, getTasksByProject, getTask, createTask, updateTask, deleteTask } from "../services/task.js";
 import { addComment, getCommentsByTask } from "../services/comment.js";
-import { getRecentActivities, getActivitiesBySession } from "../services/activity.js";
+import { getRecentActivities, getActivitiesBySession, getActivitiesByProject } from "../services/activity.js";
 import { getAllProjects } from "../services/project.js";
 
 const api = new Hono();
@@ -16,6 +16,10 @@ api.get("/projects", async (c) => c.json(await getAllProjects()));
 
 api.get("/sessions", async (c) => {
   const active = c.req.query("active");
+  const projectId = c.req.query("project_id");
+  if (projectId) {
+    return c.json(active === "true" ? await getActiveSessionsByProject(projectId) : await getSessionsByProject(projectId));
+  }
   return c.json(active === "true" ? await getActiveSessions() : await getAllSessions());
 });
 
@@ -38,6 +42,10 @@ api.get("/sessions/:id/activities", async (c) => c.json(await getActivitiesBySes
 
 api.get("/agents", async (c) => {
   const active = c.req.query("active");
+  const projectId = c.req.query("project_id");
+  if (projectId) {
+    return c.json(active === "true" ? await getActiveAgentsByProject(projectId) : await getAgentsByProject(projectId));
+  }
   return c.json(active === "true" ? await getActiveAgents() : await getAllAgents());
 });
 
@@ -142,10 +150,40 @@ api.post("/tasks/:id/comments", async (c) => {
 
 api.get("/activities", async (c) => {
   const limit = parseInt(c.req.query("limit") ?? "50", 10);
-  return c.json(await getRecentActivities(limit));
+  const projectId = c.req.query("project_id");
+  return c.json(projectId ? await getActivitiesByProject(projectId, limit) : await getRecentActivities(limit));
 });
 
 api.get("/stats", async (c) => {
+  const projectId = c.req.query("project_id");
+
+  if (projectId) {
+    const [
+      total_sessions,
+      active_sessions,
+      total_agents,
+      active_agents,
+      total_context_entries,
+      total_file_changes
+    ] = await Promise.all([
+      getSessionsCountByProject(projectId),
+      getActiveSessionsCountByProject(projectId),
+      getAgentsCountByProject(projectId),
+      getActiveAgentsCountByProject(projectId),
+      getContextEntriesCountByProject(projectId),
+      getFileChangesCountByProject(projectId)
+    ]);
+
+    return c.json({
+      total_sessions,
+      active_sessions,
+      total_agents,
+      active_agents,
+      total_context_entries,
+      total_file_changes
+    });
+  }
+
   const [
     total_sessions,
     active_sessions,

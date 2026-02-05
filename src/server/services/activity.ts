@@ -26,3 +26,15 @@ export async function getRecentActivities(limit: number = 50) {
   const db = await getDb();
   return db.all(`SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?`, limit);
 }
+
+export async function getActivitiesByProject(projectId: string, limit: number = 50) {
+  const db = await getDb();
+  return db.all(
+    `SELECT activity_log.* FROM activity_log
+     JOIN sessions ON activity_log.session_id = sessions.id
+     WHERE sessions.project_id = ?
+     ORDER BY activity_log.created_at DESC
+     LIMIT ?`,
+    projectId, limit
+  );
+}

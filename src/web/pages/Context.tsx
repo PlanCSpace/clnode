@@ -12,10 +12,9 @@ export default function Context() {
   const { selected: projectId } = useProject();
 
   useEffect(() => {
-    api.sessions().then((s) => {
-      const filtered = projectId ? s.filter(ss => ss.project_id === projectId) : s;
-      setSessions(filtered);
-      if (filtered.length > 0) setSelectedSession(filtered[0].id);
+    api.sessions(false, projectId ?? undefined).then((s) => {
+      setSessions(s);
+      if (s.length > 0) setSelectedSession(s[0].id);
       else { setSelectedSession(""); setEntries([]); }
     }).catch(() => {});
   }, [projectId]);

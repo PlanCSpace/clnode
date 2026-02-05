@@ -48,3 +48,25 @@ export async function getActiveSessionsCount() {
   const result = await db.all(`SELECT COUNT(*) as count FROM sessions WHERE status = 'active'`);
   return Number(result[0]?.count ?? 0);
 }
+
+export async function getSessionsByProject(projectId: string) {
+  const db = await getDb();
+  return db.all(`SELECT * FROM sessions WHERE project_id = ? ORDER BY started_at DESC`, projectId);
+}
+
+export async function getActiveSessionsByProject(projectId: string) {
+  const db = await getDb();
+  return db.all(`SELECT * FROM sessions WHERE project_id = ? AND status = 'active' ORDER BY started_at DESC`, projectId);
+}
+
+export async function getSessionsCountByProject(projectId: string) {
+  const db = await getDb();
+  const result = await db.all(`SELECT COUNT(*) as count FROM sessions WHERE project_id = ?`, projectId);
+  return Number(result[0]?.count ?? 0);
+}
+
+export async function getActiveSessionsCountByProject(projectId: string) {
+  const db = await getDb();
+  const result = await db.all(`SELECT COUNT(*) as count FROM sessions WHERE project_id = ? AND status = 'active'`, projectId);
+  return Number(result[0]?.count ?? 0);
+}

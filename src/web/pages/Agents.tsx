@@ -19,12 +19,11 @@ export default function Agents() {
 
   const loadData = useCallback(async () => {
     try {
-      const allSessions = await api.sessions();
-      const filtered = projectId ? allSessions.filter(s => s.project_id === projectId) : allSessions;
-      setSessions(filtered);
+      const sessions = await api.sessions(false, projectId ?? undefined);
+      setSessions(sessions);
       const map: Record<string, Agent[]> = {};
       await Promise.all(
-        filtered.map(async (s) => {
+        sessions.map(async (s) => {
           map[s.id] = await api.sessionAgents(s.id);
         })
       );

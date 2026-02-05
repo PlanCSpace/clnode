@@ -137,13 +137,25 @@ export function formatTime(ts: string | null): string {
 export const api = {
   health: () => get<{ status: string; uptime: number }>("/health"),
   projects: () => get<Project[]>("/projects"),
-  sessions: (active?: boolean) => get<Session[]>(`/sessions${active ? "?active=true" : ""}`),
+  sessions: (active?: boolean, projectId?: string) => {
+    const params = new URLSearchParams();
+    if (active) params.set("active", "true");
+    if (projectId) params.set("project_id", projectId);
+    const qs = params.toString();
+    return get<Session[]>(`/sessions${qs ? `?${qs}` : ""}`);
+  },
   session: (id: string) => get<Session>(`/sessions/${id}`),
   sessionAgents: (id: string) => get<Agent[]>(`/sessions/${id}/agents`),
   sessionContext: (id: string) => get<ContextEntry[]>(`/sessions/${id}/context`),
   sessionFiles: (id: string) => get<FileChange[]>(`/sessions/${id}/files`),
   sessionActivities: (id: string) => get<Activity[]>(`/sessions/${id}/activities`),
-  agents: (active?: boolean) => get<Agent[]>(`/agents${active ? "?active=true" : ""}`),
+  agents: (active?: boolean, projectId?: string) => {
+    const params = new URLSearchParams();
+    if (active) params.set("active", "true");
+    if (projectId) params.set("project_id", projectId);
+    const qs = params.toString();
+    return get<Agent[]>(`/agents${qs ? `?${qs}` : ""}`);
+  },
   agentContext: (id: string) => get<ContextEntry[]>(`/agents/${id}/context`),
   agentFiles: (id: string) => get<FileChange[]>(`/agents/${id}/files`),
   agent: (id: string) => get<Agent>(`/agents/${id}`),
@@ -158,6 +170,12 @@ export const api = {
   taskComments: (taskId: number) => get<TaskComment[]>(`/tasks/${taskId}/comments`),
   addTaskComment: (taskId: number, data: { content: string; author?: string; comment_type?: string }) =>
     post<{ ok: boolean; id: number }>(`/tasks/${taskId}/comments`, data),
-  activities: (limit?: number) => get<Activity[]>(`/activities${limit ? `?limit=${limit}` : ""}`),
-  stats: () => get<Stats>("/stats"),
+  activities: (limit?: number, projectId?: string) => {
+    const params = new URLSearchParams();
+    if (limit) params.set("limit", String(limit));
+    if (projectId) params.set("project_id", projectId);
+    const qs = params.toString();
+    return get<Activity[]>(`/activities${qs ? `?${qs}` : ""}`);
+  },
+  stats: (projectId?: string) => get<Stats>(`/stats${projectId ? `?project_id=${projectId}` : ""}`),
 };

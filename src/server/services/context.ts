@@ -82,3 +82,14 @@ export async function getTotalContextEntriesCount() {
   const result = await db.all(`SELECT COUNT(*) as count FROM context_entries`);
   return Number(result[0]?.count ?? 0);
 }
+
+export async function getContextEntriesCountByProject(projectId: string) {
+  const db = await getDb();
+  const result = await db.all(
+    `SELECT COUNT(*) as count FROM context_entries
+     JOIN sessions ON context_entries.session_id = sessions.id
+     WHERE sessions.project_id = ?`,
+    projectId
+  );
+  return Number(result[0]?.count ?? 0);
+}
