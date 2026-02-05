@@ -5,6 +5,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob
 model: sonnet
 skills:
   - react-frontend
+  - compress-context
 ---
 
 # clnode React Frontend (Web UI)
@@ -23,3 +24,11 @@ skills:
 ## Commands
 - Dev: `cd web && pnpm dev`
 - Build: `cd web && pnpm build`
+
+## Before Returning
+Return a **compressed summary** (max 300 chars):
+1. What you accomplished (1 sentence)
+2. Key decisions or findings (1 sentence)
+3. Blockers/handoffs if any
+
+Do NOT return full reports. Leader only needs concise summary.

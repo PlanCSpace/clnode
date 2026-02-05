@@ -1,30 +1,23 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useCallback } from "react";
 import { api, type Session, type Agent, type Activity, type Task, type Stats, type DailyActivity, type AgentContextSize, type AgentTokenUsage, type TotalTokenUsage, formatTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
 import { useProject } from "../lib/ProjectContext";
+import { useQuery } from "../lib/useQuery";
 import { Card } from "../components/Card";
-import { Badge, type Variant } from "../components/Badge";
+import { Badge } from "../components/Badge";
+import { EventBadge, EVENT_VARIANTS } from "../components/EventBadge";
 import { BarChart } from "../components/Chart";
-import { RiTerminalBoxLine, RiRobot2Line, RiDatabase2Line, RiFileEditLine, RiPulseLine, RiTaskLine, RiBarChartLine, RiTimeLine, RiCoinLine } from "react-icons/ri";
+import { RiTerminalBoxLine, RiRobot2Line, RiDatabase2Line, RiFileEditLine, RiPulseLine, RiTaskLine, RiTimeLine, RiCoinLine } from "react-icons/ri";
+
+type DashboardData = [Session[], Agent[], Agent[], Activity[], Stats, Task[], DailyActivity[], AgentContextSize[], AgentTokenUsage[], TotalTokenUsage];
 
 export default function Dashboard() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [allAgents, setAllAgents] = useState<Agent[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [dailyActivity, setDailyActivity] = useState<DailyActivity[]>([]);
-  const [contextSizes, setContextSizes] = useState<AgentContextSize[]>([]);
-  const [tokenUsage, setTokenUsage] = useState<AgentTokenUsage[]>([]);
-  const [totalTokens, setTotalTokens] = useState<TotalTokenUsage | null>(null);
-  const { connected, events, reconnectCount } = useWebSocket();
+  const { connected, events } = useWebSocket();
   const { selected: projectId } = useProject();
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const loadData = useCallback(() => {
+  const fetcher = useCallback(async () => {
     const pid = projectId ?? undefined;
-    Promise.all([
+    return Promise.all([
       api.sessions(true, pid),
       api.agents(true, pid),
       api.agents(false, pid),
@@ -35,29 +28,12 @@ export default function Dashboard() {
       api.usageContextSizes(pid),
       api.usageTokens(pid),
       api.usageTotalTokens(pid),
-    ]).then(([s, a, allA, act, st, t, daily, ctx, tok, totTok]) => {
-      setSessions(s);
-      setAgents(a);
-      setAllAgents(allA);
-      setActivities(act);
-      setStats(st);
-      setTasks(t);
-      setDailyActivity(daily);
-      setContextSizes(ctx);
-      setTokenUsage(tok);
-      setTotalTokens(totTok);
-    }).catch(() => {});
+    ]) as Promise<DashboardData>;
   }, [projectId]);
 
-  useEffect(() => { loadData(); }, [loadData, reconnectCount]);
+  const { data } = useQuery<DashboardData>({ fetcher, deps: [projectId] });
 
-  useEffect(() => {
-    if (events.length > 0) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(loadData, 500);
-    }
-    return () => clearTimeout(debounceRef.current);
-  }, [events.length, loadData]);
+  const [sessions = [], agents = [], allAgents = [], activities = [], stats, tasks = [], dailyActivity = [], contextSizes = [], tokenUsage = [], totalTokens] = data ?? [];
 
   const agentTypeCounts = allAgents.reduce<Record<string, number>>((acc, a) => {
     const type = a.agent_type || a.agent_name || "unknown";
@@ -75,7 +51,7 @@ export default function Dashboard() {
     return acc;
   }, {});
 
-  const EVENT_COLORS: Record<string, string> = {
+  const EVENT_CHART_COLORS: Record<string, string> = {
     SessionStart: "bg-green-500",
     SessionEnd: "bg-red-500",
     SubagentStart: "bg-blue-500",
@@ -87,7 +63,7 @@ export default function Dashboard() {
 
   const activityTypeData = Object.entries(activityTypeCounts)
     .sort((a, b) => b[1] - a[1])
-    .map(([label, value]) => ({ label, value, color: EVENT_COLORS[label] || "bg-zinc-500" }));
+    .map(([label, value]) => ({ label, value, color: EVENT_CHART_COLORS[label] || "bg-zinc-500" }));
 
   // Daily activity chart (messages per day)
   const dailyActivityData = [...dailyActivity]
@@ -222,15 +198,3 @@ export default function Dashboard() {
   );
 }
 
-function EventBadge({ type }: { type: string }) {
-  const variants: Record<string, Variant> = {
-    SessionStart: "success",
-    SessionEnd: "danger",
-    SubagentStart: "info",
-    SubagentStop: "purple",
-    PostToolUse: "warning",
-    UserPromptSubmit: "cyan",
-    Stop: "orange",
-  };
-  return <Badge variant={variants[type] ?? "neutral"}>{type}</Badge>;
-}

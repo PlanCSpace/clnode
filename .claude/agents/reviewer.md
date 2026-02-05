@@ -3,6 +3,8 @@ name: reviewer
 description: clnode code reviewer — quality, security, and pattern consistency across server/DB/hook/CLI/UI
 tools: Read, Grep, Glob, Bash
 model: opus
+skills:
+  - compress-context
 ---
 
 # clnode Code Reviewer
@@ -45,6 +47,14 @@ model: opus
 - TypeScript ESM (type: module) — imports use .js extension
 - Type safety, minimize `any` usage
 - No exposed secrets or hardcoded values
+
+## Before Returning
+Return a **compressed summary** (max 300 chars):
+1. PASS/FAIL with reason (1 sentence)
+2. Critical issues count and brief description
+3. Suggestions count
+
+Do NOT return full review reports. Leader only needs concise summary.
 
 ## On Completion
 Organize by priority:

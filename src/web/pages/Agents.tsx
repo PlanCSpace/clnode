@@ -1,46 +1,35 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { api, type Agent, type Session, formatDateTime, formatTime } from "../lib/api";
-import { useWebSocket } from "../lib/useWebSocket";
 import { useProject } from "../lib/ProjectContext";
+import { useQuery } from "../lib/useQuery";
 import { Card } from "../components/Card";
 import { Badge, statusVariant } from "../components/Badge";
+import { FilterButton } from "../components/FilterButton";
+import { EmptyState } from "../components/EmptyState";
 import { AgentDetail } from "../components/AgentDetail";
 
 type Filter = "all" | "active" | "completed";
+type AgentsData = { sessions: Session[]; agentsBySession: Record<string, Agent[]> };
 
 export default function Agents() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [agentsBySession, setAgentsBySession] = useState<Record<string, Agent[]>>({});
   const [filter, setFilter] = useState<Filter>("all");
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
-  const { events, reconnectCount } = useWebSocket();
   const { selected: projectId } = useProject();
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const loadData = useCallback(async () => {
-    try {
-      const sessions = await api.sessions(false, projectId ?? undefined);
-      setSessions(sessions);
-      const map: Record<string, Agent[]> = {};
-      await Promise.all(
-        sessions.map(async (s) => {
-          map[s.id] = await api.sessionAgents(s.id);
-        })
-      );
-      setAgentsBySession(map);
-    } catch {}
+  const fetcher = useCallback(async (): Promise<AgentsData> => {
+    const sessions = await api.sessions(false, projectId ?? undefined);
+    const map: Record<string, Agent[]> = {};
+    await Promise.all(
+      sessions.map(async (s) => {
+        map[s.id] = await api.sessionAgents(s.id);
+      })
+    );
+    return { sessions, agentsBySession: map };
   }, [projectId]);
 
-  useEffect(() => { loadData(); }, [loadData, reconnectCount]);
-
-  useEffect(() => {
-    if (events.length > 0) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(loadData, 500);
-    }
-    return () => clearTimeout(debounceRef.current);
-  }, [events.length, loadData]);
+  const { data, reload } = useQuery<AgentsData>({ fetcher, deps: [projectId] });
+  const { sessions = [], agentsBySession = {} } = data ?? {};
 
   const allAgents = Object.values(agentsBySession).flat();
   const totalCount = allAgents.length;
@@ -56,20 +45,16 @@ export default function Agents() {
         <h2 className="text-2xl font-bold text-zinc-50">Agents</h2>
         <div className="flex gap-1">
           {(["all", "active", "completed"] as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1 rounded-lg text-xs transition-colors ${filter === f ? "bg-emerald-900/60 text-emerald-300" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
-            >
+            <FilterButton key={f} active={filter === f} onClick={() => setFilter(f)}>
               {f}
-            </button>
+            </FilterButton>
           ))}
         </div>
         <span className="text-xs text-zinc-500">{totalCount} agents</span>
       </div>
 
       <div className="space-y-4">
-        {visibleSessions.length === 0 && <p className="text-zinc-600 text-sm">No agents found</p>}
+        {visibleSessions.length === 0 && <EmptyState title="No agents found" />}
         {visibleSessions.map((session) => {
           const agents = filterAgents(agentsBySession[session.id] ?? []);
           const isCollapsed = collapsedSessions.has(session.id);
@@ -111,7 +96,7 @@ export default function Agents() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                api.killAgent(agent.id).then(loadData).catch(() => {});
+                                api.killAgent(agent.id).then(reload).catch(() => {});
                               }}
                               className="ml-auto px-2 py-0.5 text-[10px] rounded-lg bg-red-900/40 text-red-400 hover:bg-red-900/70 transition-colors"
                               title="Kill agent"

@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { api, type Task, type TaskComment, formatDateTime } from "../lib/api";
-import { useWebSocket } from "../lib/useWebSocket";
 import { useProject } from "../lib/ProjectContext";
+import { useQuery } from "../lib/useQuery";
 
 const COLUMNS = [
   { key: "idea", label: "Idea", color: "purple" },
@@ -62,30 +62,24 @@ function getColIdx(status: string): number {
 }
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
-  const { events } = useWebSocket();
   const { selected: projectId } = useProject();
 
-  const reload = useCallback(() => {
-    api.tasks(projectId ?? undefined).then(setTasks).catch(() => {});
+  const fetcher = useCallback(() => {
+    return api.tasks(projectId ?? undefined);
   }, [projectId]);
 
-  useEffect(() => { reload(); }, [reload]);
-
-  useEffect(() => {
-    if (events.length > 0) {
-      const latest = events[0];
-      if (["SubagentStart", "SubagentStop", "task_created", "task_updated", "task_deleted"].includes(latest.event)) {
-        reload();
-      }
-    }
-  }, [events, reload]);
+  const { data: tasks = [], reload } = useQuery<Task[]>({
+    fetcher,
+    deps: [projectId],
+    reloadOnEvents: (event) =>
+      ["SubagentStart", "SubagentStop", "task_created", "task_updated", "task_deleted"].includes(event.event),
+  });
 
   const loadComments = useCallback((taskId: number) => {
     api.taskComments(taskId).then(setComments).catch(() => {});
@@ -125,7 +119,9 @@ export default function Tasks() {
     try { await api.addTaskComment(taskId, { content: newComment, comment_type: "note" }); setNewComment(""); loadComments(taskId); } catch {}
   };
 
-  const byStatus = (status: string) => tasks.filter((t) => t.status === status);
+  const byStatus = (status: string) => tasks
+    .filter((t) => t.status === status)
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
   const handleDrop = (e: React.DragEvent, targetStatus: string) => {
     e.preventDefault();

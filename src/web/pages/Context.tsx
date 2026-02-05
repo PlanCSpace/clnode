@@ -1,29 +1,43 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api, type ContextEntry, type Session, formatDateTime } from "../lib/api";
 import { useProject } from "../lib/ProjectContext";
+import { useQuery } from "../lib/useQuery";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
+import { EmptyState } from "../components/EmptyState";
 
 export default function Context() {
-  const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
-  const [entries, setEntries] = useState<ContextEntry[]>([]);
   const [search, setSearch] = useState("");
   const { selected: projectId } = useProject();
 
-  useEffect(() => {
-    api.sessions(false, projectId ?? undefined).then((s) => {
-      setSessions(s);
-      if (s.length > 0) setSelectedSession(s[0].id);
-      else { setSelectedSession(""); setEntries([]); }
-    }).catch(() => {});
+  const sessionsFetcher = useCallback(() => {
+    return api.sessions(false, projectId ?? undefined);
   }, [projectId]);
 
+  const { data: sessions = [] } = useQuery<Session[]>({
+    fetcher: sessionsFetcher,
+    deps: [projectId],
+    reloadOnEvents: false,
+  });
+
   useEffect(() => {
-    if (selectedSession) {
-      api.sessionContext(selectedSession).then(setEntries).catch(() => {});
+    if (sessions.length > 0 && !selectedSession) {
+      setSelectedSession(sessions[0].id);
+    } else if (sessions.length === 0) {
+      setSelectedSession("");
     }
+  }, [sessions, selectedSession]);
+
+  const entriesFetcher = useCallback(() => {
+    return selectedSession ? api.sessionContext(selectedSession) : Promise.resolve([]);
   }, [selectedSession]);
+
+  const { data: entries = [] } = useQuery<ContextEntry[]>({
+    fetcher: entriesFetcher,
+    deps: [selectedSession],
+    reloadOnEvents: false,
+  });
 
   const filtered = search
     ? entries.filter(
@@ -60,11 +74,10 @@ export default function Context() {
 
       <div className="space-y-2">
         {filtered.length === 0 && (
-          <p className="text-zinc-600 text-sm">
-            {sessions.length === 0
-              ? "No sessions yet. Start a Claude Code session with hooks enabled."
-              : "No context entries"}
-          </p>
+          <EmptyState
+            title={sessions.length === 0 ? "No sessions yet" : "No context entries"}
+            description={sessions.length === 0 ? "Start a Claude Code session with hooks enabled." : undefined}
+          />
         )}
         {filtered.map((entry) => (
           <Card key={entry.id}>

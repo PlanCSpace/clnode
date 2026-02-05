@@ -47,6 +47,34 @@ Leader (Main Session / Opus)
 - Report to user after each phase completes
 - Include summary of completed work and next steps
 
+## Task Workflow
+
+태스크는 6단계 칸반으로 관리됩니다:
+
+```
+Idea → Planned → Pending → In Progress → Needs Review → Completed
+```
+
+### 상태 전환 규칙
+
+| 현재 상태 | 다음 상태 | 트리거 |
+|-----------|-----------|--------|
+| Idea | Planned | 플랜 코멘트 추가 시 |
+| Planned | In Progress | "이거 진행해줘" + assigned_to 설정 |
+| In Progress | Needs Review | 구현 완료 후 |
+| Needs Review | Completed | 리뷰 PASS 시 |
+| Needs Review | In Progress | 리뷰에서 수정사항 발견 시 |
+
+### 리뷰 수정사항 처리 (필수)
+
+리뷰에서 **Warning** 또는 **Critical** 이 나오면:
+1. 태스크를 **In Progress**로 되돌림
+2. 수정사항 **반드시** 처리
+3. 다시 **Needs Review**로 이동
+4. 재리뷰 진행
+
+**Suggestion**은 선택적이지만, 처리 권장.
+
 ## Review Loop Protocol
 
 After fixes are made, **do NOT auto-trigger re-review** — always confirm with user.
@@ -62,3 +90,4 @@ Implement → Review → Fix → Ask user "Re-review?"
 1. After fixes complete, Leader MUST ask user if re-review is needed
 2. If user wants to stop, add `[needs_review]` tag to the task
 3. Prevent infinite loops: only repeat when user explicitly says "continue"
+4. **리뷰 Warning/Critical은 반드시 수정** — Suggestion만 선택적

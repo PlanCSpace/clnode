@@ -3,6 +3,8 @@ name: cli-hooks
 description: clnode CLI and hook system — commander.js CLI, hook.sh script, templates, init system
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: sonnet
+skills:
+  - compress-context
 ---
 
 # clnode CLI & Hook System
@@ -48,3 +50,11 @@ templates/
 - bin: `clnode` → `dist/cli/index.js`
 - files: dist/, templates/, src/hooks/
 - prepublishOnly: `pnpm build`
+
+## Before Returning
+Return a **compressed summary** (max 300 chars):
+1. What you accomplished (1 sentence)
+2. Key decisions or findings (1 sentence)
+3. Blockers/handoffs if any
+
+Do NOT return full reports. Leader only needs concise summary.

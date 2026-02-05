@@ -1,6 +1,6 @@
 ---
-name: usage
-description: Analyze token usage and daily activity statistics. Use to check session token consumption, compare agent usage, or monitor weekly activity trends.
+name: session-usage
+description: Analyze session token usage and agent breakdown. Use /usage for Max plan quota, use this for session-level details.
 version: 1.0.0
 model: haiku
 ---

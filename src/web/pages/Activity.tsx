@@ -1,8 +1,12 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { api, type Activity as ActivityType, type FileChange, formatTime } from "../lib/api";
 import { useWebSocket } from "../lib/useWebSocket";
 import { useProject } from "../lib/ProjectContext";
-import { Badge, type Variant } from "../components/Badge";
+import { useQuery } from "../lib/useQuery";
+import { Badge } from "../components/Badge";
+import { EventBadge } from "../components/EventBadge";
+import { FilterButton } from "../components/FilterButton";
+import { EmptyState } from "../components/EmptyState";
 
 const EVENT_TYPES = [
   "SessionStart", "SessionEnd", "SubagentStart", "SubagentStop",
@@ -10,28 +14,18 @@ const EVENT_TYPES = [
 ];
 
 export default function Activity() {
-  const [activities, setActivities] = useState<ActivityType[]>([]);
   const [files, setFiles] = useState<FileChange[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [subagentOnly, setSubagentOnly] = useState(false);
   const [tab, setTab] = useState<"log" | "files">("log");
-  const { events, connected } = useWebSocket();
+  const { connected } = useWebSocket();
   const { selected: projectId } = useProject();
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const loadActivities = useCallback(() => {
-    api.activities(100, projectId ?? undefined).then(setActivities).catch(() => {});
+  const fetcher = useCallback(() => {
+    return api.activities(100, projectId ?? undefined);
   }, [projectId]);
 
-  useEffect(() => { loadActivities(); }, [loadActivities]);
-
-  useEffect(() => {
-    if (events.length > 0) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(loadActivities, 500);
-    }
-    return () => clearTimeout(debounceRef.current);
-  }, [events.length, loadActivities]);
+  const { data: activities = [] } = useQuery<ActivityType[]>({ fetcher, deps: [projectId] });
 
   const loadFiles = (sessionId: string) => {
     api.sessionFiles(sessionId).then(setFiles).catch(() => {});
@@ -49,18 +43,12 @@ export default function Activity() {
       </div>
 
       <div className="flex gap-2">
-        <button
-          onClick={() => setTab("log")}
-          className={`px-3 py-1 rounded-lg text-xs transition-colors ${tab === "log" ? "bg-emerald-900/60 text-emerald-300" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
-        >
+        <FilterButton active={tab === "log"} onClick={() => setTab("log")}>
           Event Log
-        </button>
-        <button
-          onClick={() => setTab("files")}
-          className={`px-3 py-1 rounded-lg text-xs transition-colors ${tab === "files" ? "bg-emerald-900/60 text-emerald-300" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
-        >
+        </FilterButton>
+        <FilterButton active={tab === "files"} onClick={() => setTab("files")}>
           File Changes
-        </button>
+        </FilterButton>
         {tab === "log" && (
           <>
             <button
@@ -85,14 +73,14 @@ export default function Activity() {
 
       {tab === "log" && (
         <div className="space-y-1">
-          {filtered.length === 0 && <p className="text-zinc-600 text-sm">No activity</p>}
+          {filtered.length === 0 && <EmptyState title="No activity" />}
           {filtered.map((a) => {
             let details: Record<string, unknown> = {};
             try { details = JSON.parse(a.details); } catch (_) {}
             return (
               <div key={a.id} className="flex items-start gap-2 text-xs py-1.5 border-b border-zinc-800/50">
                 <span className="text-zinc-600 w-20 shrink-0">{formatTime(a.created_at)}</span>
-                <EventBadge type={a.event_type} />
+                <EventBadgeWrapper type={a.event_type} />
                 <span className="text-zinc-400 font-mono w-20 shrink-0">{a.agent_id?.slice(0, 10) ?? "—"}</span>
                 <span className="text-zinc-500 truncate">
                   {Object.entries(details).map(([k, v]) => `${k}=${String(v)}`).join(" ")}
@@ -116,7 +104,7 @@ export default function Activity() {
             </button>
           </div>
           <div className="space-y-1">
-            {files.length === 0 && <p className="text-zinc-600 text-sm">No file changes loaded</p>}
+            {files.length === 0 && <EmptyState title="No file changes loaded" />}
             {files.map((f) => (
               <div key={f.id} className="flex items-center gap-2 text-xs py-1.5 border-b border-zinc-800/50">
                 <span className="text-zinc-600 w-20 shrink-0">{formatTime(f.created_at)}</span>
@@ -132,19 +120,10 @@ export default function Activity() {
   );
 }
 
-function EventBadge({ type }: { type: string }) {
-  const variants: Record<string, Variant> = {
-    SessionStart: "success",
-    SessionEnd: "danger",
-    SubagentStart: "info",
-    SubagentStop: "purple",
-    PostToolUse: "warning",
-    UserPromptSubmit: "cyan",
-    Stop: "orange",
-  };
+function EventBadgeWrapper({ type }: { type: string }) {
   return (
     <span className="w-28 shrink-0 text-center">
-      <Badge variant={variants[type] ?? "neutral"}>{type}</Badge>
+      <EventBadge type={type} />
     </span>
   );
 }

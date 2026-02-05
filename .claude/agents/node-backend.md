@@ -3,6 +3,8 @@ name: node-backend
 description: clnode backend development — Hono server, DuckDB, hook events, service layer, REST API, WebSocket
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: sonnet
+skills:
+  - compress-context
 ---
 
 # clnode Node.js Backend
@@ -48,3 +50,11 @@ src/server/
 - Dev: `pnpm dev`
 - Build: `pnpm build`
 - Test: `pnpm test`
+
+## Before Returning
+Return a **compressed summary** (max 300 chars):
+1. What you accomplished (1 sentence)
+2. Key decisions or findings (1 sentence)
+3. Blockers/handoffs if any
+
+Do NOT return full reports. Leader only needs concise summary.

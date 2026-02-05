@@ -1,6 +1,6 @@
 ---
 name: compress-context
-description: Compress long agent context summaries to prevent context explosion. Use before spawning multiple agents or when context_summary exceeds 500 characters.
+description: Compress long agent context summaries to prevent context explosion. Use before spawning multiple agents or when context_summary exceeds 1000 characters.
 version: 1.0.0
 model: sonnet
 ---
@@ -18,7 +18,7 @@ Run this skill before spawning multiple agents, especially after:
 
 ## Process
 
-1. Query agents with context_summary > 500 characters
+1. Query agents with context_summary > 1000 characters
 2. Spawn a Sonnet agent to summarize each (cost-effective + quality)
 3. Update the database with compressed summaries
 
@@ -38,7 +38,7 @@ Use the Task tool with:
 
 ```
 You are a context compressor. For each agent summary below, create a compressed
-version (max 500 chars) that captures:
+version (max 300 chars) that captures:
 1. What was accomplished (1 sentence)
 2. Key decisions or findings (1 sentence)
 3. Any blockers or handoffs (if applicable)
@@ -57,7 +57,7 @@ Agent data to compress:
 1. Get agents with long summaries:
 
 ```bash
-curl -s "http://localhost:3100/api/agents" | jq '[.[] | select(.context_summary) | select((.context_summary | length) > 500) | {id, agent_type, len: (.context_summary | length), summary: .context_summary}]'
+curl -s "http://localhost:3100/api/agents" | jq '[.[] | select(.context_summary) | select((.context_summary | length) > 1000) | {id, agent_type, len: (.context_summary | length), summary: .context_summary}]'
 ```
 
 2. If results exist, spawn Sonnet agent with the data and prompt template above
@@ -79,7 +79,7 @@ Reviewed extractCount refactoring. Found 2 warnings (type precision, duplicate i
 
 ## Target
 
-- Each summary: max 500 characters
+- Each summary: max 300 characters
 - Focus on actionable information
 - Preserve key decisions and blockers
 - Use Sonnet model for cost-effective quality summarization
