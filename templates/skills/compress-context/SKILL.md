@@ -1,3 +1,9 @@
+---
+name: compress-context
+description: Compress long agent context summaries to prevent context explosion. Use before spawning multiple agents or when context_summary exceeds 500 characters.
+version: 1.0.0
+---
+
 # Context Compressor
 
 Compress long agent context summaries in the database to prevent context explosion.

@@ -138,8 +138,9 @@ Copies agents, skills, and rules from the `templates/` directory to the project'
 │   ├── reviewer.md
 │   ├── test-writer.md
 │   └── architect.md
-├── skills/           # Detailed instructions (5)
-│   └── (same as above)
+├── skills/           # User-invoked skills (2)
+│   ├── compress-context/SKILL.md
+│   └── usage/SKILL.md
 └── rules/            # Auto-load rules (5)
     ├── team.md
     ├── typescript.md
@@ -163,7 +164,7 @@ Claude Code supports three types of configuration files, each with different rol
 | File Location | Role | When Loaded | Content |
 |--------------|------|-------------|---------|
 | `.claude/agents/*.md` | **Agent Definition** | When creating agent via Task tool | Metadata (name, tools, model) + basic instructions |
-| `.claude/skills/*.md` | **Detailed Instructions** | When `/skill-name` command or agent reference | Specific implementation patterns, API usage, code style |
+| `.claude/skills/*/SKILL.md` | **User-invoked Skills** | When `/skill-name` command is called | Commands like `/usage`, `/compress-context` |
 | `.claude/rules/*.md` | **Auto Rules** | Auto-loaded in every conversation | Project-wide rules, conventions, constraints |
 
 ### Differences by Example
@@ -174,16 +175,16 @@ Claude Code supports three types of configuration files, each with different rol
 ├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
 │ rules/typescript.md     │ Auto-load rules         │ strict mode, import order, naming      │
 ├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
-│ skills/backend-dev.md   │ Backend instructions    │ API patterns, DB queries, error handling│
+│ skills/usage/SKILL.md   │ User-invoked skill      │ /usage command for token analytics     │
 ├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
-│ agents/backend-dev.md   │ Agent metadata          │ name, tools, model + responsibilities  │
+│ agents/backend-dev.md   │ Agent definition        │ Backend agent role, responsibilities   │
 └─────────────────────────┴─────────────────────────┴────────────────────────────────────────┘
 ```
 
 ### When to Use What?
 
 - **rules**: Rules that should always apply to every conversation (code style, project conventions)
-- **skills**: Detailed instructions referenced only when a specific role is needed (implementation patterns, API guides)
+- **skills**: Commands invoked via `/skill-name` (e.g., `/usage`, `/compress-context`)
 - **agents**: Definitions for agents created via the Task tool in multi-agent mode
 
 ### clnode-Provided Templates
@@ -231,9 +232,18 @@ Provide a summary of:
 3. Known limitations
 ```
 
-### 2. (Optional) Add Detailed Skill
+### 2. (Optional) Add User-Invoked Skill
 
-Write detailed instructions that the agent can reference in `.claude/skills/my-agent.md`.
+Create a skill that can be invoked via `/skill-name` in `.claude/skills/my-skill/SKILL.md`.
+
+Skills must include YAML frontmatter:
+```yaml
+---
+name: my-skill
+description: Skill description (helps Claude decide when to use it)
+version: 1.0.0
+---
+```
 
 ### 3. (Optional) Add Project Rules
 

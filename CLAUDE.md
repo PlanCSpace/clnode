@@ -14,11 +14,13 @@ Leader's window until it hits limits and loses track.
 
 **clnode solves this by externalizing agent coordination state to a local DB.**
 
-Using only two features that Claude Code already provides — **hooks** and
-**skills** — clnode builds a swarm mode layer on top of vanilla Claude Code:
+Using Claude Code's built-in features — **hooks**, **agents**, **skills**, and
+**rules** — clnode builds a swarm mode layer on top of vanilla Claude Code:
 
 - **hooks** intercept agent lifecycle events and route context through DuckDB
-- **skills** define agent roles, rules, and workflows
+- **agents** define subagent roles (backend-dev, reviewer, etc.)
+- **skills** provide user-invoked commands (/compress-context, /usage)
+- **rules** enforce project-wide conventions (auto-loaded every conversation)
 - **DuckDB** acts as shared memory between agents (the communication channel)
 
 When Agent B starts, the SubagentStart hook automatically injects Agent A's
@@ -80,8 +82,9 @@ src/
   web/                  — React SPA (Dashboard, Agents, Context, Tasks, Activity)
 templates/
   hooks-config.json     — Hooks config template
-  skills/               — 5 agent role templates
-  rules/                — Swarm context rules
+  agents/               — 5 agent role definitions (backend-dev, frontend-dev, reviewer, etc.)
+  skills/               — User-invoked skills (/compress-context, /usage)
+  rules/                — Swarm context rules (team, typescript, react, nodejs)
 ```
 
 ## DuckDB Schema (8 tables)
@@ -110,7 +113,7 @@ clnode start            # Start daemon (background)
 clnode stop             # Stop daemon
 clnode status           # Show active sessions/agents
 clnode init [path]      # Install hooks + register project
-clnode init --with-skills  # Also copy skill templates
+clnode init --with-skills  # Also copy agents/skills/rules templates
 clnode ui               # Open Web UI in browser
 clnode logs [-n N] [-f] # View daemon logs
 ```

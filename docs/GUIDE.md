@@ -138,8 +138,9 @@ clnode init /path/to/your/project --with-skills
 │   ├── reviewer.md
 │   ├── test-writer.md
 │   └── architect.md
-├── skills/           # 상세 작업 지침 (5개)
-│   └── (위와 동일)
+├── skills/           # 사용자 호출 스킬 (2개)
+│   ├── compress-context/SKILL.md
+│   └── usage/SKILL.md
 └── rules/            # 자동 로드 규칙 (5개)
     ├── team.md
     ├── typescript.md
@@ -163,7 +164,7 @@ Claude Code는 세 가지 유형의 설정 파일을 지원합니다. 각각 다
 | 파일 위치 | 역할 | 로드 시점 | 내용 |
 |----------|------|----------|------|
 | `.claude/agents/*.md` | **에이전트 정의** | Task 도구로 에이전트 생성 시 | 메타데이터 (이름, 도구, 모델) + 기본 지침 |
-| `.claude/skills/*.md` | **상세 작업 지침** | `/skill-name` 명령 또는 에이전트가 참조 시 | 구체적인 구현 패턴, API 사용법, 코드 스타일 |
+| `.claude/skills/*/SKILL.md` | **사용자 호출 스킬** | `/skill-name` 명령 호출 시 | `/usage`, `/compress-context` 같은 명령 |
 | `.claude/rules/*.md` | **자동 규칙** | 모든 대화에 자동 로드 | 프로젝트 전반 규칙, 컨벤션, 제약 |
 
 ### 예시로 보는 차이
@@ -174,16 +175,16 @@ Claude Code는 세 가지 유형의 설정 파일을 지원합니다. 각각 다
 ├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
 │ rules/typescript.md     │ 자동 로드 규칙          │ strict 모드, import 순서, 네이밍 규칙    │
 ├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
-│ skills/backend-dev.md   │ 백엔드 작업 지침        │ API 패턴, DB 쿼리 방식, 에러 처리 방법   │
+│ skills/usage/SKILL.md   │ 사용자 호출 스킬        │ /usage 명령으로 토큰 사용량 분석         │
 ├─────────────────────────┼─────────────────────────┼────────────────────────────────────────┤
-│ agents/backend-dev.md   │ 에이전트 메타데이터      │ name, tools, model + 기본 책임 범위      │
+│ agents/backend-dev.md   │ 에이전트 정의           │ 백엔드 에이전트 역할, 책임, 가이드라인    │
 └─────────────────────────┴─────────────────────────┴────────────────────────────────────────┘
 ```
 
 ### 언제 무엇을 쓰나?
 
 - **rules**: 모든 대화에 항상 적용되어야 하는 규칙 (코드 스타일, 프로젝트 컨벤션)
-- **skills**: 특정 역할이 필요할 때만 참조하는 상세 지침 (구현 패턴, API 가이드)
+- **skills**: `/skill-name` 명령으로 호출하는 기능 (예: `/usage`, `/compress-context`)
 - **agents**: 멀티에이전트 모드에서 Task 도구로 생성되는 에이전트의 정의
 
 ### clnode 제공 템플릿
@@ -231,9 +232,18 @@ model: sonnet
 3. 알려진 제한사항
 ```
 
-### 2. (선택) 상세 스킬 추가
+### 2. (선택) 사용자 호출 스킬 추가
 
-에이전트가 참조할 수 있는 상세 지침을 `.claude/skills/my-agent.md`에 작성합니다.
+`/skill-name` 명령으로 호출할 수 있는 스킬을 `.claude/skills/my-skill/SKILL.md`에 작성합니다.
+
+스킬은 YAML frontmatter를 포함해야 합니다:
+```yaml
+---
+name: my-skill
+description: 스킬 설명 (Claude가 언제 사용할지 판단용)
+version: 1.0.0
+---
+```
 
 ### 3. (선택) 프로젝트 규칙 추가
 

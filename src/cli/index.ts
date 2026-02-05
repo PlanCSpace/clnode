@@ -157,15 +157,26 @@ program
 
       if (fs.existsSync(skillsSourceDir)) {
         fs.mkdirSync(skillsTargetDir, { recursive: true });
-        const skillFiles = fs.readdirSync(skillsSourceDir).filter((f: string) => f.endsWith(".md"));
-        for (const file of skillFiles) {
-          const dest = path.join(skillsTargetDir, file);
-          if (!fs.existsSync(dest)) {
-            fs.copyFileSync(path.join(skillsSourceDir, file), dest);
-            console.log(`[clnode] Skill template copied: ${file}`);
+        // Skills are now in folder/SKILL.md structure
+        const skillDirs = fs.readdirSync(skillsSourceDir).filter((f: string) => {
+          const fullPath = path.join(skillsSourceDir, f);
+          return fs.statSync(fullPath).isDirectory();
+        });
+        let skillCount = 0;
+        for (const dir of skillDirs) {
+          const skillFile = path.join(skillsSourceDir, dir, "SKILL.md");
+          if (fs.existsSync(skillFile)) {
+            const destDir = path.join(skillsTargetDir, dir);
+            const destFile = path.join(destDir, "SKILL.md");
+            if (!fs.existsSync(destFile)) {
+              fs.mkdirSync(destDir, { recursive: true });
+              fs.copyFileSync(skillFile, destFile);
+              console.log(`[clnode] Skill template copied: ${dir}/SKILL.md`);
+              skillCount++;
+            }
           }
         }
-        console.log(`[clnode] ${skillFiles.length} skill templates installed to ${skillsTargetDir}`);
+        console.log(`[clnode] ${skillCount} skill templates installed to ${skillsTargetDir}`);
       }
 
       const agentsSourceDir = path.resolve(baseDir, "../../templates/agents");
