@@ -42,17 +42,22 @@ Leader       → 결정만 내림, 컨텍스트 최소화
 ## 빠른 시작
 
 ```bash
-# 설치
-git clone https://github.com/SierraDevsec/clnode.git
-cd clnode && pnpm install && pnpm build
+# 프로젝트 디렉토리에서
+npx clnode init .
 
-# 실행
-clnode start                    # 데몬 시작
-clnode init /path/to/project    # 프로젝트 초기화
-clnode ui                       # 대시보드 열기
+# 대시보드 열기
+npx clnode ui
 ```
 
 init 후 **Claude Code 세션을 재시작하세요** — hooks는 세션 시작 시 활성화됩니다.
+
+### 개발용 설치
+
+```bash
+git clone https://github.com/SierraDevsec/clnode.git
+cd clnode && pnpm install && pnpm build
+node dist/cli/index.js start
+```
 
 ## 작동 원리
 
@@ -188,6 +193,12 @@ templates/
 ```
 
 **기술 스택**: Node.js 22, TypeScript, Hono, DuckDB, React 19, Vite 7, TailwindCSS 4
+
+## 이슈 및 피드백
+
+버그를 발견했거나 기능 요청이 있으신가요?
+
+👉 [이슈 등록하기](https://github.com/SierraDevsec/clnode/issues)
 
 ## 라이센스
 
