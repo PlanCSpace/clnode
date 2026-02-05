@@ -1,30 +1,32 @@
-# clnode 사용 규칙
+# clnode Usage Rules
 
-clnode는 Claude Code 멀티에이전트 협업을 위한 swarm intelligence 플러그인입니다.
-에이전트 간 컨텍스트 공유, 태스크 관리, 세션 추적 기능을 제공합니다.
+clnode is a swarm intelligence plugin for Claude Code multi-agent collaboration.
+It provides agent context sharing, task management, and session tracking.
 
-## 커스텀 에이전트 설정
+## Agent Setup
 
-`.claude/agents/` 폴더에 커스텀 에이전트가 없다면:
-- Claude Code 기본 에이전트(Explore, Plan 등)만 사용 가능
-- 커스텀 에이전트(reviewer 등)를 사용하려면: `npx clnode init . --with-agents`
+Default installation includes `reviewer` and `worker` agents.
 
-## 컨텍스트 압축 (필수)
+For additional agents:
+- **More agents**: `npx clnode init . --with-agents` (architect, backend-dev, etc.)
+- **Custom agent creation**: Use `/clnode-agents` skill
 
-에이전트 결과(context_summary)가 **1000자를 초과**하면 반드시 `/compress-context` 스킬을 사용하세요.
+## Context Compression (Required)
+
+When agent result (context_summary) exceeds **1000 characters**, you MUST use `/compress-context` skill.
 
 ```
 /compress-context
 ```
 
-압축하지 않으면:
-- Leader 에이전트의 컨텍스트가 폭발
-- 토큰 낭비 및 응답 품질 저하
-- 멀티에이전트 체인 중단 위험
+Without compression:
+- Leader agent's context explodes
+- Token waste and degraded response quality
+- Multi-agent chain breakdown risk
 
-## 세션 토큰 사용량
+## Session Token Usage
 
-현재 세션의 토큰 사용량과 에이전트별 breakdown을 확인하려면:
+To check current session's token usage and agent breakdown:
 
 ```
 /session-usage
@@ -32,67 +34,67 @@ clnode는 Claude Code 멀티에이전트 협업을 위한 swarm intelligence 플
 
 ## Web UI
 
-clnode Web UI에서 실시간으로 확인 가능:
-- Dashboard: 활성 세션, 에이전트, 토큰 사용량
-- Agents: 에이전트 트리 및 상태
-- Tasks: 태스크 칸반 보드
-- Context: 컨텍스트 엔트리 목록
-- Activity: 이벤트 로그
+Real-time monitoring available at clnode Web UI:
+- Dashboard: Active sessions, agents, token usage
+- Agents: Agent tree and status
+- Tasks: Task kanban board
+- Context: Context entry list
+- Activity: Event log
 
 ```
 http://localhost:3100
 ```
 
-## 태스크 관리
+## Task Management
 
-clnode는 6단계 칸반으로 태스크를 관리합니다:
+clnode manages tasks in 6-stage kanban:
 
 ```
 Idea → Planned → Pending → In Progress → Needs Review → Completed
 ```
 
-### 에이전트와 태스크 연동
-- SubagentStart: pending 태스크가 있으면 자동으로 in_progress + assigned
-- SubagentStop: in_progress 태스크가 있으면 자동으로 completed
+### Agent-Task Integration
+- SubagentStart: Auto-assigns pending tasks to in_progress
+- SubagentStop: Auto-completes in_progress tasks
 
-### 수동 태스크 조작 (필요시)
-Web UI 또는 API를 통해 직접 관리:
+### Manual Task Operations (when needed)
+Manage via Web UI or API:
 ```bash
-# 태스크 목록
+# List tasks
 curl http://localhost:3100/api/tasks
 
-# 태스크 생성
+# Create task
 curl -X POST http://localhost:3100/api/tasks \
   -H "Content-Type: application/json" \
-  -d '{"title": "태스크 제목", "description": "설명"}'
+  -d '{"title": "Task title", "description": "Description"}'
 ```
 
-## 컨텍스트 공유
+## Context Sharing
 
-에이전트가 종료되면 context_summary가 자동으로 DB에 저장됩니다.
-다음 에이전트 시작 시 이전 에이전트들의 결과가 자동 주입됩니다.
+When an agent stops, context_summary is automatically saved to DB.
+When the next agent starts, previous agents' results are auto-injected.
 
-### 수동 컨텍스트 추가 (필요시)
+### Manual Context Addition (when needed)
 ```bash
 curl -X POST http://localhost:3100/hooks/PostContext \
   -H "Content-Type: application/json" \
-  -d '{"session_id": "...", "entry_type": "decision", "content": "결정사항 내용"}'
+  -d '{"session_id": "...", "entry_type": "decision", "content": "Decision content"}'
 ```
 
-entry_type 종류:
-- `decision`: 아키텍처/기술 결정
-- `blocker`: 차단 이슈
-- `note`: 일반 메모
-- `agent_summary`: 에이전트 결과 요약
+entry_type options:
+- `decision`: Architecture/technical decisions
+- `blocker`: Blocking issues
+- `note`: General notes
+- `agent_summary`: Agent result summary
 
-## 에이전트 간 협업
+## Agent Collaboration
 
-### Leader가 해야 할 것
-- 태스크 분배 전 전체 계획 수립
-- 에이전트 결과를 사용자에게 요약 (전체 relay X)
-- 리뷰 결과에 따른 재작업 조율
+### Leader Responsibilities
+- Plan overall task distribution before spawning agents
+- Summarize agent results to user (don't relay full output)
+- Coordinate rework based on review results
 
-### 에이전트가 해야 할 것
-- 결과 보고 시 **변경 파일 목록 + 핵심 결정사항**만 간결하게
-- 1000자 초과 시 `/compress-context` 필수
-- 블로커 발견 시 즉시 보고
+### Agent Responsibilities
+- Report results concisely: **changed files + key decisions only**
+- Use `/compress-context` when exceeding 1000 chars
+- Report blockers immediately

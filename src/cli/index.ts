@@ -188,22 +188,29 @@ program
         console.log(`[clnode] ${skillCount} skill templates installed to ${skillsTargetDir}`);
       }
 
-      // Agents: only copy with --with-agents (clnode-specific)
-      if (opts.withAgents) {
-        const agentsSourceDir = path.resolve(baseDir, "../../templates/agents");
-        const agentsTargetDir = path.join(claudeDir, "agents");
+      // Agents: reviewer.md always (universal), others with --with-agents
+      const agentsSourceDir = path.resolve(baseDir, "../../templates/agents");
+      const agentsTargetDir = path.join(claudeDir, "agents");
+      const universalAgents = ["reviewer.md", "worker.md"];
 
-        if (fs.existsSync(agentsSourceDir)) {
-          fs.mkdirSync(agentsTargetDir, { recursive: true });
-          const agentFiles = fs.readdirSync(agentsSourceDir).filter((f: string) => f.endsWith(".md"));
-          for (const file of agentFiles) {
-            const dest = path.join(agentsTargetDir, file);
-            if (!fs.existsSync(dest)) {
-              fs.copyFileSync(path.join(agentsSourceDir, file), dest);
-              console.log(`[clnode] Agent template copied: ${file}`);
-            }
+      if (fs.existsSync(agentsSourceDir)) {
+        fs.mkdirSync(agentsTargetDir, { recursive: true });
+        const agentFiles = fs.readdirSync(agentsSourceDir).filter((f: string) => f.endsWith(".md"));
+        let agentCount = 0;
+        for (const file of agentFiles) {
+          // Skip non-universal agents unless --with-agents
+          if (!universalAgents.includes(file) && !opts.withAgents) {
+            continue;
           }
-          console.log(`[clnode] ${agentFiles.length} agent templates installed to ${agentsTargetDir}`);
+          const dest = path.join(agentsTargetDir, file);
+          if (!fs.existsSync(dest)) {
+            fs.copyFileSync(path.join(agentsSourceDir, file), dest);
+            console.log(`[clnode] Agent template copied: ${file}`);
+            agentCount++;
+          }
+        }
+        if (agentCount > 0) {
+          console.log(`[clnode] ${agentCount} agent templates installed to ${agentsTargetDir}`);
         }
       }
 
@@ -297,7 +304,8 @@ program
       console.log(`[clnode] Using custom port: ${port}`);
     }
     if (!opts.withAgents) {
-      console.log(`[clnode] Tip: For custom agents (reviewer, etc.), run: npx clnode init . --with-agents`);
+      console.log(`[clnode] Tip: For more agents (architect, backend-dev, etc.), run: npx clnode init . --with-agents`);
+      console.log(`[clnode] Tip: To create custom agents, use /clnode-agents skill in Claude Code`);
     }
   });
 
