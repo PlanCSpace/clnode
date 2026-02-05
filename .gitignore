@@ -9,4 +9,5 @@ data/*.duckdb.wal
 .claude/settings.local.json
 
 .mcp.json
+.playwright-mcp/
 data/
