@@ -42,17 +42,22 @@ No wrapper. No custom framework. Just a plugin that fills the gap.
 ## Quick Start
 
 ```bash
-# Install
-git clone https://github.com/SierraDevsec/clnode.git
-cd clnode && pnpm install && pnpm build
+# In your project directory
+npx clnode init .
 
-# Run
-clnode start                    # Start daemon
-clnode init /path/to/project    # Initialize your project
-clnode ui                       # Open dashboard
+# Open dashboard
+npx clnode ui
 ```
 
 **Restart your Claude Code session** after init — hooks activate on session start.
+
+### For Development
+
+```bash
+git clone https://github.com/SierraDevsec/clnode.git
+cd clnode && pnpm install && pnpm build
+node dist/cli/index.js start
+```
 
 ## How It Works
 
@@ -188,6 +193,12 @@ templates/
 ```
 
 **Tech Stack**: Node.js 22, TypeScript, Hono, DuckDB, React 19, Vite 7, TailwindCSS 4
+
+## Issues & Feedback
+
+Found a bug or have a feature request?
+
+👉 [Open an issue](https://github.com/SierraDevsec/clnode/issues)
 
 ## License
 
