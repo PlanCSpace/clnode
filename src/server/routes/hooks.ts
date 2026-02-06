@@ -66,22 +66,6 @@ async function extractFromTranscript(transcriptPath: string): Promise<Transcript
   return result;
 }
 
-/** Rule-based compression for long summaries (no AI call) */
-function compressSummary(summary: string, maxLength = 1000): string {
-  if (summary.length <= maxLength) return summary;
-
-  // Strategy 1: Extract last "## Summary" or "## Completed Work" section
-  const sectionMatch = summary.match(/## (?:Summary|Completed Work|결과|완료)[^\n]*\n([\s\S]+?)(?=\n## |\n---|\Z)/i);
-  if (sectionMatch && sectionMatch[1].trim().length > 50) {
-    const extracted = sectionMatch[1].trim();
-    if (extracted.length <= maxLength) return extracted;
-  }
-
-  // Strategy 2: Take first 700 chars + ... + last 250 chars
-  const head = summary.slice(0, 700).trimEnd();
-  const tail = summary.slice(-250).trimStart();
-  return `${head}\n...\n${tail}`;
-}
 
 const hooks = new Hono();
 
@@ -162,10 +146,6 @@ hooks.post("/:event", async (c) => {
           outputTokens = extraction.usage.output_tokens;
         }
 
-        // Auto-compress long summaries before storing
-        if (contextSummary) {
-          contextSummary = compressSummary(contextSummary);
-        }
 
         if (agentId) {
           const agent = await getAgent(agentId);
