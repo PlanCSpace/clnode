@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, type Project } from "./api";
 
 interface ProjectContextType {
@@ -14,8 +15,10 @@ const ProjectContext = createContext<ProjectContextType>({
 });
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
+  const [searchParams] = useSearchParams();
+  const initialProject = searchParams.get("project");
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialProject);
 
   useEffect(() => {
     api.projects().then(setProjects).catch(() => {});

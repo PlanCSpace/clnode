@@ -101,4 +101,8 @@ export class ApiClient {
   addTaskComment(taskId: number, data: { content: string; author?: string; comment_type?: string }) {
     return this.post<{ ok: boolean; id: number }>(`/api/tasks/${taskId}/comments`, data);
   }
+
+  activities(limit = 50) {
+    return this.get<Activity[]>(`/api/activities?limit=${limit}`);
+  }
 }

@@ -1,4 +1,8 @@
-export function getWebviewHtml(port: number, route: string = "/"): string {
+export function getWebviewHtml(port: number, route: string = "/", projectId?: string | null): string {
+  const params = new URLSearchParams({ embed: "true" });
+  if (projectId) params.set("project", projectId);
+  const separator = route.includes("?") ? "&" : "?";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,7 +27,7 @@ export function getWebviewHtml(port: number, route: string = "/"): string {
   </style>
 </head>
 <body>
-  <iframe src="http://localhost:${port}${route}"></iframe>
+  <iframe src="http://localhost:${port}${route}${separator}${params.toString()}"></iframe>
 </body>
 </html>`;
 }

@@ -1,16 +1,10 @@
 import * as vscode from "vscode";
 import { ApiClient } from "./api-client";
 import { StatusBar } from "./status-bar";
-import { WsClient } from "./ws-client";
-import { KanbanProvider } from "./treeview/kanban-provider";
-import { KanbanDragDropController } from "./treeview/drag-drop-controller";
-import { AgentsProvider } from "./treeview/agents-provider";
-import { registerCommands } from "./commands";
-import { ensureDaemon } from "./daemon";
+import { SidebarViewProvider } from "./sidebar-view";
+import { openWebviewPanel, updatePanelProject, disposePanel } from "./webview/panel";
+import { ensureDaemon, startDaemon, stopDaemon } from "./daemon";
 import { autoInitWorkspace } from "./auto-init";
-import { disposePanel } from "./webview/panel";
-import { openTaskEditor } from "./webview/task-editor";
-import { openSessionDetail } from "./webview/session-detail";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const config = vscode.workspace.getConfiguration("clnode");
@@ -20,71 +14,47 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const getPort = () => vscode.workspace.getConfiguration("clnode").get<number>("port", 3100);
   const baseUrl = `http://localhost:${port}`;
-
   const api = new ApiClient(baseUrl);
 
-  // Ensure clnode is installed + daemon is running
-  await ensureDaemon(baseUrl, autoStart);
+  // Selected project state
+  let selectedProject: string | null = null;
 
-  // Auto-init: install hooks for workspace if not present
-  await autoInitWorkspace(port);
+  // Sidebar webview (embed mode — compact stats + nav buttons)
+  const workspacePaths = (vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath);
+  const sidebarProvider = new SidebarViewProvider(port, workspacePaths);
+  sidebarProvider.onProjectChange((projectId) => {
+    selectedProject = projectId;
+    updatePanelProject(getPort(), projectId);
+  });
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(SidebarViewProvider.viewType, sidebarProvider)
+  );
 
   // Status bar
   const statusBar = new StatusBar(api);
   statusBar.startPolling(pollingInterval);
   context.subscriptions.push({ dispose: () => statusBar.dispose() });
 
-  // Kanban TreeView
-  const kanbanProvider = new KanbanProvider(api);
-  const kanbanTree = vscode.window.createTreeView("clnode-kanban", {
-    treeDataProvider: kanbanProvider,
-    showCollapseAll: true,
-    canSelectMany: false,
-    dragAndDropController: new KanbanDragDropController(api, kanbanProvider),
-  });
-  // Open task editor on click
-  kanbanTree.onDidChangeSelection((e) => {
-    const item = e.selection[0];
-    if (item?.kind === "task" && item.task) {
-      openTaskEditor(item.task, api, () => kanbanProvider.refresh());
-    }
-  });
-  context.subscriptions.push(kanbanTree);
+  // Commands — open full-size webview in editor area
+  context.subscriptions.push(
+    vscode.commands.registerCommand("clnode.openDashboard", () => openWebviewPanel(getPort(), "/", "clnode Dashboard", selectedProject)),
+    vscode.commands.registerCommand("clnode.openTasks", () => openWebviewPanel(getPort(), "/tasks", "clnode Tasks", selectedProject)),
+    vscode.commands.registerCommand("clnode.openAgents", () => openWebviewPanel(getPort(), "/agents", "clnode Agents", selectedProject)),
+    vscode.commands.registerCommand("clnode.openContext", () => openWebviewPanel(getPort(), "/context", "clnode Context", selectedProject)),
+    vscode.commands.registerCommand("clnode.openActivity", () => openWebviewPanel(getPort(), "/activity", "clnode Activity", selectedProject)),
+    vscode.commands.registerCommand("clnode.startDaemon", async () => {
+      const ok = await startDaemon();
+      if (ok) vscode.window.showInformationMessage("clnode daemon started.");
+    }),
+    vscode.commands.registerCommand("clnode.stopDaemon", async () => {
+      await stopDaemon();
+      vscode.window.showInformationMessage("clnode daemon stopped.");
+    }),
+  );
 
-  // Agents TreeView
-  const agentsProvider = new AgentsProvider(api);
-  const agentsTree = vscode.window.createTreeView("clnode-agents", {
-    treeDataProvider: agentsProvider,
-    showCollapseAll: true,
-  });
-  // Open session detail on click
-  agentsTree.onDidChangeSelection((e) => {
-    const item = e.selection[0];
-    if (item?.kind === "session" && item.sessionId) {
-      openSessionDetail(item.sessionId, api);
-    }
-  });
-  context.subscriptions.push(agentsTree);
-
-  // Register commands
-  registerCommands(context, api, kanbanProvider, agentsProvider, getPort);
-
-  // WebSocket for real-time updates
-  const wsClient = new WsClient(`ws://localhost:${port}/ws`);
-  wsClient.onRefresh(() => {
-    kanbanProvider.refresh();
-    agentsProvider.refresh();
-    statusBar.update();
-  });
-  wsClient.connect();
-  context.subscriptions.push({ dispose: () => wsClient.dispose() });
-
-  // Fallback polling (in case WS is not available)
-  const pollTimer = setInterval(() => {
-    kanbanProvider.refresh();
-    agentsProvider.refresh();
-  }, pollingInterval);
-  context.subscriptions.push({ dispose: () => clearInterval(pollTimer) });
+  // Async setup (non-blocking)
+  ensureDaemon(baseUrl, autoStart).catch(() => {});
+  autoInitWorkspace(port).catch(() => {});
 }
 
 export function deactivate(): void {

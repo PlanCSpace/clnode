@@ -17,6 +17,9 @@ export async function autoInitWorkspace(port: number): Promise<void> {
     const hooks = hasHooksInstalled(workspacePath);
     const agents = hasAgents(workspacePath);
 
+    // Always ensure project is registered in DB
+    await registerProject(workspacePath, port);
+
     // Everything already set up
     if (hooks && agents) continue;
 

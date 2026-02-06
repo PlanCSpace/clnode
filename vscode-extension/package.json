@@ -2,12 +2,13 @@
   "name": "clnode-vscode",
   "displayName": "clnode",
   "description": "Claude Code swarm intelligence — agent monitoring, kanban board, and dashboard inside VSCode",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "publisher": "clnode",
   "repository": {
     "type": "git",
     "url": "https://github.com/clnode/clnode"
   },
+  "icon": "resources/clnode-icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -31,64 +32,37 @@
     "views": {
       "clnode-sidebar": [
         {
-          "id": "clnode-kanban",
-          "name": "Kanban Board",
-          "type": "tree"
-        },
-        {
-          "id": "clnode-agents",
-          "name": "Active Agents",
-          "type": "tree",
-          "visibility": "collapsed"
+          "id": "clnode-sidebar-webview",
+          "name": "clnode",
+          "type": "webview"
         }
       ]
     },
     "commands": [
       {
         "command": "clnode.openDashboard",
-        "title": "Open Dashboard",
+        "title": "Open Dashboard (Full)",
         "category": "clnode"
       },
       {
         "command": "clnode.openTasks",
-        "title": "Open Tasks Board",
+        "title": "Open Tasks (Full)",
         "category": "clnode"
       },
       {
-        "command": "clnode.refreshKanban",
-        "title": "Refresh Kanban",
-        "category": "clnode",
-        "icon": "$(refresh)"
+        "command": "clnode.openAgents",
+        "title": "Open Agents (Full)",
+        "category": "clnode"
       },
       {
-        "command": "clnode.createTask",
-        "title": "Create Task",
-        "category": "clnode",
-        "icon": "$(add)"
+        "command": "clnode.openContext",
+        "title": "Open Context (Full)",
+        "category": "clnode"
       },
       {
-        "command": "clnode.moveTaskForward",
-        "title": "Move Forward",
-        "category": "clnode",
-        "icon": "$(arrow-right)"
-      },
-      {
-        "command": "clnode.moveTaskBack",
-        "title": "Move Back",
-        "category": "clnode",
-        "icon": "$(arrow-left)"
-      },
-      {
-        "command": "clnode.editTask",
-        "title": "Edit Task",
-        "category": "clnode",
-        "icon": "$(edit)"
-      },
-      {
-        "command": "clnode.deleteTask",
-        "title": "Delete Task",
-        "category": "clnode",
-        "icon": "$(trash)"
+        "command": "clnode.openActivity",
+        "title": "Open Activity (Full)",
+        "category": "clnode"
       },
       {
         "command": "clnode.startDaemon",
@@ -99,66 +73,8 @@
         "command": "clnode.stopDaemon",
         "title": "Stop Daemon",
         "category": "clnode"
-      },
-      {
-        "command": "clnode.refreshAgents",
-        "title": "Refresh Agents",
-        "category": "clnode",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "clnode.killAgent",
-        "title": "Kill Agent",
-        "category": "clnode",
-        "icon": "$(debug-stop)"
       }
     ],
-    "menus": {
-      "view/title": [
-        {
-          "command": "clnode.refreshKanban",
-          "when": "view == clnode-kanban",
-          "group": "navigation"
-        },
-        {
-          "command": "clnode.createTask",
-          "when": "view == clnode-kanban",
-          "group": "navigation"
-        },
-        {
-          "command": "clnode.refreshAgents",
-          "when": "view == clnode-agents",
-          "group": "navigation"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "clnode.moveTaskForward",
-          "when": "view == clnode-kanban && viewItem == task",
-          "group": "inline@1"
-        },
-        {
-          "command": "clnode.moveTaskBack",
-          "when": "view == clnode-kanban && viewItem == task",
-          "group": "inline@2"
-        },
-        {
-          "command": "clnode.editTask",
-          "when": "view == clnode-kanban && viewItem == task",
-          "group": "1_edit"
-        },
-        {
-          "command": "clnode.deleteTask",
-          "when": "view == clnode-kanban && viewItem == task",
-          "group": "2_delete"
-        },
-        {
-          "command": "clnode.killAgent",
-          "when": "view == clnode-agents && viewItem == agent",
-          "group": "inline"
-        }
-      ]
-    },
     "configuration": {
       "title": "clnode",
       "properties": {

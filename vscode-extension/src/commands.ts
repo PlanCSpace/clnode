@@ -2,16 +2,23 @@ import * as vscode from "vscode";
 import type { ApiClient } from "./api-client";
 import type { KanbanProvider } from "./treeview/kanban-provider";
 import type { AgentsProvider } from "./treeview/agents-provider";
+import type { DashboardProvider } from "./treeview/dashboard-provider";
+import type { ContextProvider } from "./treeview/context-provider";
+import type { ActivityProvider } from "./treeview/activity-provider";
 import type { KanbanItem } from "./treeview/kanban-item";
 import { openWebviewPanel } from "./webview/panel";
 import { startDaemon, stopDaemon } from "./daemon";
 import { COLUMNS } from "./types";
+import type { ContextEntry, Activity } from "./types";
 
 export function registerCommands(
   context: vscode.ExtensionContext,
   api: ApiClient,
   kanban: KanbanProvider,
   agents: AgentsProvider,
+  dashboard: DashboardProvider,
+  contextView: ContextProvider,
+  activity: ActivityProvider,
   getPort: () => number
 ): void {
   context.subscriptions.push(
@@ -23,12 +30,36 @@ export function registerCommands(
       openWebviewPanel(getPort(), "/tasks", "clnode Tasks");
     }),
 
+    vscode.commands.registerCommand("clnode.openAgents", () => {
+      openWebviewPanel(getPort(), "/agents", "clnode Agents");
+    }),
+
+    vscode.commands.registerCommand("clnode.openContext", () => {
+      openWebviewPanel(getPort(), "/context", "clnode Context");
+    }),
+
+    vscode.commands.registerCommand("clnode.openActivity", () => {
+      openWebviewPanel(getPort(), "/activity", "clnode Activity");
+    }),
+
     vscode.commands.registerCommand("clnode.refreshKanban", () => {
       kanban.refresh();
     }),
 
     vscode.commands.registerCommand("clnode.refreshAgents", () => {
       agents.refresh();
+    }),
+
+    vscode.commands.registerCommand("clnode.refreshDashboard", () => {
+      dashboard.refresh();
+    }),
+
+    vscode.commands.registerCommand("clnode.refreshContext", () => {
+      contextView.refresh();
+    }),
+
+    vscode.commands.registerCommand("clnode.refreshActivity", () => {
+      activity.refresh();
     }),
 
     vscode.commands.registerCommand("clnode.startDaemon", async () => {
@@ -164,6 +195,62 @@ export function registerCommands(
       } catch (e) {
         vscode.window.showErrorMessage(`Failed to move task: ${e}`);
       }
+    }),
+
+    vscode.commands.registerCommand("clnode.showContextEntry", async (entry: ContextEntry) => {
+      if (!entry) return;
+      const tags = entry.tags?.length ? entry.tags.join(", ") : "none";
+      const header = [
+        `# Context Entry`,
+        ``,
+        `| Field | Value |`,
+        `|-------|-------|`,
+        `| **Type** | ${entry.entry_type} |`,
+        `| **Agent** | ${entry.agent_id ?? "—"} |`,
+        `| **Tags** | ${tags} |`,
+        `| **Created** | ${new Date(entry.created_at).toLocaleString()} |`,
+        ``,
+        `---`,
+        ``,
+      ].join("\n");
+      const doc = await vscode.workspace.openTextDocument({
+        content: header + entry.content,
+        language: "markdown",
+      });
+      await vscode.window.showTextDocument(doc, { preview: true });
+    }),
+
+    vscode.commands.registerCommand("clnode.showActivityDetail", async (act: Activity) => {
+      if (!act) return;
+      let detailStr = "";
+      if (act.details) {
+        try {
+          const d = typeof act.details === "string" ? JSON.parse(act.details) : act.details;
+          detailStr = JSON.stringify(d, null, 2);
+        } catch {
+          detailStr = String(act.details);
+        }
+      }
+      const content = [
+        `# ${act.event_type}`,
+        ``,
+        `| Field | Value |`,
+        `|-------|-------|`,
+        `| **Session** | ${act.session_id} |`,
+        `| **Agent** | ${act.agent_id ?? "—"} |`,
+        `| **Time** | ${new Date(act.created_at).toLocaleString()} |`,
+        ``,
+        `## Details`,
+        ``,
+        "```json",
+        detailStr || "{}",
+        "```",
+      ].join("\n");
+      const doc = await vscode.workspace.openTextDocument({
+        content,
+        language: "markdown",
+      });
+      await vscode.window.showTextDocument(doc, { preview: true });
     }),
 
     vscode.commands.registerCommand("clnode.killAgent", async (item: { agentData?: { id: string; agent_name: string } }) => {

@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { NavLink, Outlet, useSearchParams } from "react-router-dom";
 import { RiDashboardLine, RiRobot2Line, RiDatabase2Line, RiTaskLine, RiPulseLine } from "react-icons/ri";
 import { useProject } from "../lib/ProjectContext";
 
@@ -12,6 +13,29 @@ const links = [
 
 export default function Layout() {
   const { projects, selected, setSelected } = useProject();
+  const [searchParams] = useSearchParams();
+  const isEmbed = searchParams.get("embed") === "true";
+
+  useEffect(() => {
+    if (isEmbed) {
+      document.documentElement.style.background = "transparent";
+      document.body.style.background = "transparent";
+      return () => {
+        document.documentElement.style.background = "";
+        document.body.style.background = "";
+      };
+    }
+  }, [isEmbed]);
+
+  if (isEmbed) {
+    return (
+      <div className="min-h-screen bg-transparent">
+        <main className="p-4 overflow-auto">
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-[var(--bg-primary)]">

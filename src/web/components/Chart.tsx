@@ -20,7 +20,7 @@ export function BarChart({ data, title }: { data: BarData[]; title?: string }) {
                 style={{ width: `${(d.value / max) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-zinc-500 w-8 text-right">{d.value}</span>
+            <span className="text-xs text-zinc-500 shrink-0 text-right tabular-nums">{d.value.toLocaleString()}</span>
           </div>
         ))}
         {data.length === 0 && <p className="text-xs text-zinc-600">No data</p>}
