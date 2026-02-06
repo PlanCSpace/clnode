@@ -1,0 +1,198 @@
+{
+  "name": "clnode-vscode",
+  "displayName": "clnode",
+  "description": "Claude Code swarm intelligence — agent monitoring, kanban board, and dashboard inside VSCode",
+  "version": "0.1.0",
+  "publisher": "clnode",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clnode/clnode"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "clnode-sidebar",
+          "title": "clnode",
+          "icon": "resources/clnode-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "clnode-sidebar": [
+        {
+          "id": "clnode-kanban",
+          "name": "Kanban Board",
+          "type": "tree"
+        },
+        {
+          "id": "clnode-agents",
+          "name": "Active Agents",
+          "type": "tree",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "clnode.openDashboard",
+        "title": "Open Dashboard",
+        "category": "clnode"
+      },
+      {
+        "command": "clnode.openTasks",
+        "title": "Open Tasks Board",
+        "category": "clnode"
+      },
+      {
+        "command": "clnode.refreshKanban",
+        "title": "Refresh Kanban",
+        "category": "clnode",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "clnode.createTask",
+        "title": "Create Task",
+        "category": "clnode",
+        "icon": "$(add)"
+      },
+      {
+        "command": "clnode.moveTaskForward",
+        "title": "Move Forward",
+        "category": "clnode",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "clnode.moveTaskBack",
+        "title": "Move Back",
+        "category": "clnode",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "clnode.editTask",
+        "title": "Edit Task",
+        "category": "clnode",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "clnode.deleteTask",
+        "title": "Delete Task",
+        "category": "clnode",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "clnode.startDaemon",
+        "title": "Start Daemon",
+        "category": "clnode"
+      },
+      {
+        "command": "clnode.stopDaemon",
+        "title": "Stop Daemon",
+        "category": "clnode"
+      },
+      {
+        "command": "clnode.refreshAgents",
+        "title": "Refresh Agents",
+        "category": "clnode",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "clnode.killAgent",
+        "title": "Kill Agent",
+        "category": "clnode",
+        "icon": "$(debug-stop)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "clnode.refreshKanban",
+          "when": "view == clnode-kanban",
+          "group": "navigation"
+        },
+        {
+          "command": "clnode.createTask",
+          "when": "view == clnode-kanban",
+          "group": "navigation"
+        },
+        {
+          "command": "clnode.refreshAgents",
+          "when": "view == clnode-agents",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "clnode.moveTaskForward",
+          "when": "view == clnode-kanban && viewItem == task",
+          "group": "inline@1"
+        },
+        {
+          "command": "clnode.moveTaskBack",
+          "when": "view == clnode-kanban && viewItem == task",
+          "group": "inline@2"
+        },
+        {
+          "command": "clnode.editTask",
+          "when": "view == clnode-kanban && viewItem == task",
+          "group": "1_edit"
+        },
+        {
+          "command": "clnode.deleteTask",
+          "when": "view == clnode-kanban && viewItem == task",
+          "group": "2_delete"
+        },
+        {
+          "command": "clnode.killAgent",
+          "when": "view == clnode-agents && viewItem == agent",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "clnode",
+      "properties": {
+        "clnode.port": {
+          "type": "number",
+          "default": 3100,
+          "description": "clnode daemon port"
+        },
+        "clnode.autoStartDaemon": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start clnode daemon on activation"
+        },
+        "clnode.pollingInterval": {
+          "type": "number",
+          "default": 5000,
+          "description": "Polling interval in ms (fallback when WebSocket is unavailable)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild --bundle src/extension.ts --outfile=dist/extension.js --format=cjs --platform=node --external:vscode --sourcemap",
+    "watch": "esbuild --bundle src/extension.ts --outfile=dist/extension.js --format=cjs --platform=node --external:vscode --sourcemap --watch",
+    "package": "pnpm build && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.18.0",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
+  }
+}
