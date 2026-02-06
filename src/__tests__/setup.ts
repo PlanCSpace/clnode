@@ -71,7 +71,9 @@ async function initTestSchema(db: Database): Promise<void> {
       status          VARCHAR DEFAULT 'active',
       started_at      TIMESTAMP DEFAULT now(),
       completed_at    TIMESTAMP,
-      context_summary TEXT
+      context_summary TEXT,
+      input_tokens    INTEGER DEFAULT 0,
+      output_tokens   INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS context_entries (

@@ -626,9 +626,9 @@ describe("intelligence service", () => {
     });
 
     describe("edge cases", () => {
-      it("should return empty string when nothing to report", async () => {
+      it("should return fallback message when nothing to report", async () => {
         const context = await buildPromptContext(fixtures.sessionId);
-        expect(context).toBe("");
+        expect(context).toBe("[clnode project context]\n\n(No active tasks or agents)");
       });
 
       it("should include header when there is content", async () => {

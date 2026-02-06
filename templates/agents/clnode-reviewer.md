@@ -1,5 +1,5 @@
 ---
-name: reviewer
+name: clnode-reviewer
 description: Code reviewer — quality, security, performance, and pattern consistency
 tools:
   - Read

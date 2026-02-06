@@ -50,16 +50,6 @@ curl -s https://raw.githubusercontent.com/SierraDevsec/clnode/main/docs/installa
 
 Claude will read the guide and install clnode automatically.
 
-### Manual Install
-
-```bash
-# In your project directory
-npx clnode init .
-
-# Open dashboard
-npx clnode ui
-```
-
 **Restart your Claude Code session** after init — hooks activate on session start.
 
 ### For Development
@@ -69,21 +59,6 @@ git clone https://github.com/SierraDevsec/clnode.git
 cd clnode && pnpm install && pnpm build
 node dist/cli/index.js start
 ```
-
-## How It Works
-
-<p align="center">
-  <img src="docs/screenshots/02-agents.png" alt="Agent Tree" width="800">
-</p>
-
-clnode intercepts Claude Code's agent lifecycle events via hooks:
-
-1. **SubagentStart** → Inject previous agents' context via `additionalContext`
-2. **SubagentStop** → Extract and save agent's work summary
-3. **PostToolUse** → Track file changes (Edit/Write)
-4. **UserPromptSubmit** → Auto-attach project context to prompts
-
-Agents communicate **through time**, not through the Leader. Agent A leaves a summary in DuckDB. Agent B starts later and receives it automatically.
 
 ## Features
 
@@ -135,16 +110,20 @@ Every user prompt automatically receives:
 - Recent decisions and blockers
 - Completed agent summaries
 
-## Web UI
+## Web UI & VSCode Extension
 
-Real-time dashboard at `http://localhost:3100`:
+Real-time dashboard at `http://localhost:3100`, also available as a VSCode sidebar:
+
+| Web UI (`localhost:3100`) | VSCode Extension |
+|:-:|:-:|
+| ![Web UI](docs/screenshots/web-ui.png) | ![VSCode](docs/screenshots/vscode-extension.png) |
 
 | Page | Description |
 |------|-------------|
-| **Dashboard** | Stats, charts, active sessions |
+| **Dashboard** | Stats, charts, token usage, active sessions |
 | **Agents** | Agent tree with parent-child hierarchy |
 | **Context** | Full-text search across entries |
-| **Tasks** | 5-stage kanban board |
+| **Tasks** | 6-stage kanban board |
 | **Activity** | Live event log via WebSocket |
 
 ## CLI
@@ -153,8 +132,7 @@ Real-time dashboard at `http://localhost:3100`:
 clnode start              # Start daemon (port 3100)
 clnode stop               # Stop daemon
 clnode status             # Show active sessions/agents
-clnode init [path]        # Install hooks
-clnode init --with-skills # Also install agent templates
+clnode init [path]        # Install hooks + agents/skills/rules + register project
 clnode ui                 # Open Web UI
 clnode logs [-f]          # View/follow daemon logs
 ```
@@ -211,25 +189,6 @@ pnpm link --global
 node dist/cli/index.js start
 ```
 
-## Architecture
-
-```
-src/
-├── cli/           CLI commands
-├── hooks/         hook.sh (stdin→stdout)
-├── server/
-│   ├── routes/    hooks.ts, api.ts, ws.ts
-│   └── services/  intelligence.ts, agent.ts, session.ts, ...
-└── web/           React 19 + TailwindCSS 4
-
-templates/
-├── hooks-config.json
-├── skills/        Agent role templates
-└── rules/         Swarm context rules
-```
-
-**Tech Stack**: Node.js 22, TypeScript, Hono, DuckDB, React 19, Vite 7, TailwindCSS 4
-
 ## Uninstall
 
 To completely remove clnode from your project:
@@ -242,9 +201,9 @@ npx clnode stop
 # Edit .claude/settings.local.json and remove the "hooks" section
 
 # 3. Remove clnode templates (optional)
-rm -rf .claude/agents/reviewer.md .claude/agents/worker.md
+rm -rf .claude/agents/clnode-reviewer.md .claude/agents/clnode-curator.md
 rm -rf .claude/skills/compress-output .claude/skills/compress-review .claude/skills/clnode-agents
-rm -rf .claude/rules/clnode-usage.md
+rm -rf .claude/rules/team.md
 
 # 4. Remove clnode data (optional - deletes all session history)
 rm -rf ~/.npm/_npx/**/node_modules/clnode/data

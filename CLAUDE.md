@@ -18,7 +18,7 @@ Using Claude Code's built-in features — **hooks**, **agents**, **skills**, and
 **rules** — clnode builds a swarm mode layer on top of vanilla Claude Code:
 
 - **hooks** intercept agent lifecycle events and route context through DuckDB
-- **agents** define subagent roles (backend-dev, reviewer, etc.)
+- **agents** define subagent roles (clnode-reviewer, clnode-curator, or custom via `/clnode-agents`)
 - **skills** provide user-invoked commands and agent-preloaded behaviors (/compress-output, /compress-review)
 - **rules** enforce project-wide conventions (auto-loaded every conversation)
 - **DuckDB** acts as shared memory between agents (the communication channel)
@@ -80,29 +80,30 @@ src/
       activity.ts       — Activity log (details JSON)
       intelligence.ts   — Smart context injection + todo enforcer
   web/                  — React SPA (Dashboard, Agents, Context, Tasks, Activity)
-    components/Layout.tsx — embed mode (?embed=true) 지원: 사이드바 숨김 + 투명 배경
-    lib/ProjectContext.tsx — URL ?project=<id> 파라미터로 초기 프로젝트 선택 지원
-vscode-extension/       — VSCode Extension (독립 패키지)
+    components/Layout.tsx — embed mode (?embed=true): hides sidebar + transparent background
+    lib/ProjectContext.tsx — URL ?project=<id> parameter for initial project selection
+vscode-extension/       — VSCode Extension (standalone package)
   src/
-    extension.ts        — activate: 사이드바 + 상태바 + 커맨드 등록
-    sidebar-view.ts     — WebviewViewProvider: 커스텀 HTML 사이드바 (stats + nav + project selector)
-    webview/panel.ts    — WebviewPanel: 에디터 영역에 iframe 웹뷰
-    webview/html-provider.ts — iframe HTML 생성 (?embed=true&project=<id>)
-    auto-init.ts        — 워크스페이스 자동 init + 프로젝트 등록
-    daemon.ts           — 데몬 health check + start/stop
+    extension.ts        — activate: sidebar + status bar + command registration
+    sidebar-view.ts     — WebviewViewProvider: custom HTML sidebar (stats + nav + project selector)
+    webview/panel.ts    — WebviewPanel: iframe webview in editor area
+    webview/html-provider.ts — iframe HTML generation (?embed=true&project=<id>)
+    auto-init.ts        — workspace auto-init + project registration
+    daemon.ts           — daemon health check + start/stop
     api-client.ts       — REST client
-    status-bar.ts       — 상태바 아이템
+    status-bar.ts       — status bar item
 templates/
   hooks-config.json     — Hooks config template
-  agents/               — 7 agent role definitions (clnode-curator, backend-dev, frontend-dev, reviewer, etc.)
+  agents/               — 2 agent role definitions (clnode-curator, clnode-reviewer)
+  agent-memory/         — Seed MEMORY.md files for agents (clnode-curator, clnode-reviewer)
   skills/               — Skills (compress-output, compress-review, clnode-agents)
-  rules/                — Swarm context rules (team, typescript, react, nodejs)
+  rules/                — Swarm rules (team)
 ```
 
 ## DuckDB Schema (8 tables)
 - **projects**: id, name, path (UNIQUE), created_at
 - **sessions**: id, project_id, started_at, ended_at, status
-- **agents**: id, session_id, agent_name, agent_type, parent_agent_id, status, started_at, completed_at, context_summary
+- **agents**: id, session_id, agent_name, agent_type, parent_agent_id, status, started_at, completed_at, context_summary, input_tokens, output_tokens
 - **context_entries**: id, session_id, agent_id, entry_type, content, tags[], created_at
 - **file_changes**: id, session_id, agent_id, file_path, change_type, created_at
 - **tasks**: id, project_id, title, description, status, assigned_to, tags[], created_at, updated_at
@@ -124,8 +125,7 @@ templates/
 clnode start            # Start daemon (background)
 clnode stop             # Stop daemon
 clnode status           # Show active sessions/agents
-clnode init [path]      # Install hooks + register project
-clnode init --with-skills  # Also copy agents/skills/rules templates
+clnode init [path]      # Install hooks + agents/skills/rules + register project
 clnode ui               # Open Web UI in browser
 clnode logs [-n N] [-f] # View daemon logs
 ```
@@ -150,47 +150,54 @@ pnpm test:watch   # Watch mode
 
 ### Architecture
 ```
-VSCode Extension (경량 클라이언트)
-├── Sidebar WebviewView — 커스텀 HTML (stats 2x2 grid + nav buttons + project selector)
-├── Editor WebviewPanel — iframe으로 Web UI embed (?embed=true&project=<id>)
-├── Status Bar — "clnode: N agents" 또는 "clnode: offline"
-└── Auto-Init — 워크스페이스 열 때 hooks 설치 + 프로젝트 DB 등록
+VSCode Extension (lightweight client)
+├── Sidebar WebviewView — custom HTML (stats 2x2 grid + nav buttons + project selector)
+├── Editor WebviewPanel — embeds Web UI via iframe (?embed=true&project=<id>)
+├── Status Bar — "clnode: N agents" or "clnode: offline"
+└── Auto-Init — installs hooks + registers project on workspace open
      ↓ HTTP/WS
-clnode daemon (이미 실행 중)
+clnode daemon (already running)
 ```
 
 ### Key Design Decisions
-- **서버 미내장**: Extension은 데몬에 HTTP로 연결하는 클라이언트만
-- **iframe embed**: Web UI를 그대로 재사용. `?embed=true`로 사이드바 숨김 + 투명 배경
-- **커스텀 사이드바 HTML**: VSCode CSS 변수(`var(--vscode-foreground)` 등)로 테마 호환
-- **반응형 사이드바**: CSS container query로 1열/2열/4열 자동 전환
-- **프로젝트 자동 선택**: 워크스페이스 path를 DB projects.path와 매칭
-- **CJS 출력**: VSCode extension은 반드시 CommonJS (`format: 'cjs'`)
+- **No embedded server**: Extension is a pure HTTP client connecting to the daemon
+- **iframe embed**: Reuses Web UI as-is. `?embed=true` hides sidebar + transparent background
+- **Custom sidebar HTML**: Theme-compatible via VSCode CSS variables (`var(--vscode-foreground)`, etc.)
+- **Responsive sidebar**: CSS container query for automatic 1/2/4 column layout
+- **Auto project selection**: Matches workspace path against DB projects.path
+- **CJS output**: VSCode extensions must use CommonJS (`format: 'cjs'`)
 
 ### Extension Build & Deploy
 ```bash
 cd vscode-extension
-pnpm build              # esbuild → dist/extension.js (CJS)
-pnpm package            # vsce package → .vsix
-code --install-extension clnode-vscode-*.vsix --force
-# VSCode: Cmd+Shift+P → "Developer: Reload Window"
+pnpm build                                              # esbuild → dist/extension.js (CJS)
+pnpm package                                            # vsce package → .vsix
+code --install-extension clnode-vscode-*.vsix --force   # VSCode: Cmd+Shift+P → "Developer: Reload Window"
 ```
 
 ### Important Notes (Extension)
-- `npx clnode start`는 npm 캐시에서 실행됨 → 로컬 개발 시 `node dist/server/index.js` 직접 실행
-- Web UI 변경 시 `pnpm build` (root) → 데몬 재시작 → extension rebuild → install → VSCode reload 필요
-- `window.open()` 함수명 충돌 주의: webview에서 `open()` 대신 `openPage()` 등 사용
-- Extension list 아이콘은 PNG 필수 (SVG 불가): `rsvg-convert` 로 변환
-- `acquireVsCodeApi()`는 webview당 1회만 호출 가능
-- sidebar webview에서 `vscode.getState()`/`vscode.setState()`로 선택 상태 유지
-- `container-type: inline-size`가 있어야 `@container` 쿼리 동작
-- `autoInitWorkspace`는 hooks/agents 유무와 무관하게 항상 `registerProject` 호출
+- `npx clnode start` runs from npm cache → use `node dist/server/index.js` directly for local dev
+- After Web UI changes: `pnpm build` (root) → restart daemon → rebuild extension → install → VSCode reload
+- Beware `window.open()` name collision: use `openPage()` etc. in webview
+- Extension list icon must be PNG (not SVG): convert with `rsvg-convert`
+- `acquireVsCodeApi()` can only be called once per webview
+- Use `vscode.getState()`/`vscode.setState()` in sidebar webview to persist selection state
+- `container-type: inline-size` is required for `@container` queries to work
+- `autoInitWorkspace` always calls `registerProject` regardless of hooks/agents presence
 
 ## Known Issues
 - Hooks require Claude Code session restart after `clnode init`
 - Agent killed by ESC or context limit → SubagentStop not fired → zombie in DB (use Kill button in UI)
 - Transcript extraction needs 500ms delay (race condition with file write)
-- VSCode Extension 설치 후 반드시 Reload Window 필요 (핫 리로드 미지원)
+- VSCode Extension requires Reload Window after install (no hot reload)
+
+## Agent Management
+
+`clnode init` installs two default agents: **clnode-reviewer** (code review) and **clnode-curator** (knowledge curation).
+
+To discover installed agents/skills/rules or create custom agents, use the `/clnode-agents` skill.
+It provides interactive discovery (scan `.claude/` directory) and a scaffolding generator
+that creates properly structured agent files with frontmatter, compress-output skill, and updates team.md.
 
 ## Swarm Best Practices
 - **Agent sizing**: Keep to 5-7 files per agent to avoid context exhaustion

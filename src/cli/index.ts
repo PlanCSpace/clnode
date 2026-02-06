@@ -124,8 +124,7 @@ program
   .description("Install lifecycle hooks and templates in the target project")
   .option("-p, --port <port>", "Daemon port (default: 3100)", String(CLNODE_PORT))
   .option("--hooks-only", "Install hooks only, skip all templates")
-  .option("--with-agents", "Include clnode-specific agent templates (for clnode development)")
-  .action(async (targetPath: string | undefined, opts: { port?: string; hooksOnly?: boolean; withAgents?: boolean }) => {
+  .action(async (targetPath: string | undefined, opts: { port?: string; hooksOnly?: boolean }) => {
     const target = targetPath ? path.resolve(targetPath) : process.cwd();
     const projectName = path.basename(target);
     const projectId = projectName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -188,23 +187,17 @@ program
         console.log(`[clnode] ${skillCount} skill templates installed to ${skillsTargetDir}`);
       }
 
-      // Agents: reviewer.md always (universal), others with --with-agents
+      // Agents: copy all templates
       const agentsSourceDir = path.resolve(baseDir, "../../templates/agents");
       const agentsTargetDir = path.join(claudeDir, "agents");
-      const universalAgents = ["reviewer.md", "clnode-curator.md"];
 
       if (fs.existsSync(agentsSourceDir)) {
         fs.mkdirSync(agentsTargetDir, { recursive: true });
         const agentFiles = fs.readdirSync(agentsSourceDir).filter((f: string) => f.endsWith(".md"));
         let agentCount = 0;
         for (const file of agentFiles) {
-          // Skip non-universal agents unless --with-agents
-          if (!universalAgents.includes(file) && !opts.withAgents) {
-            continue;
-          }
           const dest = path.join(agentsTargetDir, file);
           if (!fs.existsSync(dest)) {
-            // Replace HOOK_SCRIPT_PATH placeholder in agent templates
             let content = fs.readFileSync(path.join(agentsSourceDir, file), "utf-8");
             if (content.includes("HOOK_SCRIPT_PATH")) {
               content = content.replaceAll("HOOK_SCRIPT_PATH", hookCommand);
@@ -219,21 +212,14 @@ program
         }
       }
 
-      // Rules: clnode-usage.md always, others only with --with-agents
+      // Rules: copy all templates
       const rulesSourceDir = path.resolve(baseDir, "../../templates/rules");
       const rulesTargetDir = path.join(claudeDir, "rules");
-      // Universal rules (always copied)
-      const universalRules = ["clnode-usage.md"];
-
       if (fs.existsSync(rulesSourceDir)) {
         fs.mkdirSync(rulesTargetDir, { recursive: true });
         const rulesFiles = fs.readdirSync(rulesSourceDir).filter((f: string) => f.endsWith(".md"));
         let rulesCount = 0;
         for (const file of rulesFiles) {
-          // Skip non-universal rules unless --with-agents
-          if (!universalRules.includes(file) && !opts.withAgents) {
-            continue;
-          }
           const dest = path.join(rulesTargetDir, file);
           if (!fs.existsSync(dest)) {
             fs.copyFileSync(path.join(rulesSourceDir, file), dest);
@@ -337,10 +323,7 @@ program
     if (port !== "3100") {
       console.log(`[clnode] Using custom port: ${port}`);
     }
-    if (!opts.withAgents) {
-      console.log(`[clnode] Tip: For more agents (architect, backend-dev, etc.), run: npx clnode init . --with-agents`);
-      console.log(`[clnode] Tip: To create custom agents, use /clnode-agents skill in Claude Code`);
-    }
+    console.log(`[clnode] Tip: To create custom agents, use /clnode-agents skill in Claude Code`);
   });
 
 // clnode logs
