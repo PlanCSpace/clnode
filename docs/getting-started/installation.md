@@ -24,6 +24,10 @@ Ask Claude Code:
 curl -s https://raw.githubusercontent.com/SierraDevsec/clnode/main/docs/installation.md
 ```
 
+### VSCode Extension
+
+Install [clnode for VSCode](https://marketplace.visualstudio.com/items?itemName=DeeJayL.clnode-vscode) from the Marketplace.
+
 ### For Development
 
 ```bash
