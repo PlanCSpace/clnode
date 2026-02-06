@@ -53,6 +53,10 @@ Just ask Claude Code to run this:
 curl -s https://raw.githubusercontent.com/SierraDevsec/clnode/main/docs/installation.md
 ```
 
+### For VS Code Users
+
+Install [clnode for VSCode](https://marketplace.visualstudio.com/items?itemName=DeeJayL.clnode-vscode) from the Marketplace.
+
 Claude will read the guide and install clnode automatically.
 
 **Restart your Claude Code session** after init — hooks activate on session start.
