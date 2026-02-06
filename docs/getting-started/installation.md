@@ -24,25 +24,12 @@ Ask Claude Code:
 curl -s https://raw.githubusercontent.com/SierraDevsec/clnode/main/docs/installation.md
 ```
 
-### Quick Install
-
-```bash
-npx clnode init .
-```
-
-This installs:
-- **Hooks** in `.claude/settings.local.json`
-- **Agents**: `clnode-reviewer` (code review) + `clnode-curator` (knowledge curation)
-- **Skills**: `compress-output`, `compress-review`, `clnode-agents`
-- **Rules**: `team.md` (swarm workflow)
-- **Agent Memory**: Seed `MEMORY.md` files for agents
-
 ### For Development
 
 ```bash
 git clone https://github.com/SierraDevsec/clnode.git
 cd clnode && pnpm install && pnpm build
-node dist/cli/index.js start
+npx clnode init .
 ```
 
 ## Post-Install
