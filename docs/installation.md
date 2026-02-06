@@ -1,10 +1,3 @@
----
-title: Installation
-layout: default
-parent: Getting Started
-nav_order: 1
----
-
 # Installation
 
 ## Prerequisites
@@ -16,15 +9,6 @@ nav_order: 1
 | **curl** | any | Pre-installed on most systems |
 
 ## Install
-
-### For Claude Code Users
-
-Ask Claude Code:
-```
-Fetch https://raw.githubusercontent.com/SierraDevsec/clnode/main/docs/installation.md and follow the instructions to install clnode.
-```
-
-### Quick Install
 
 ```bash
 npx clnode init .
