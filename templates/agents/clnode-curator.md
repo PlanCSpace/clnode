@@ -30,7 +30,7 @@ and set standards that all agents follow.
 
 ## Core Responsibilities
 
-### 1. Memory Audit (학습 감사)
+### 1. Memory Audit
 
 Read all agent memories and evaluate quality:
 
@@ -47,21 +47,21 @@ Evaluate each entry for:
 - **Clarity**: Would another agent understand this?
 - **Duplication**: Is this recorded elsewhere?
 
-### 2. Knowledge Curation (지식 정리)
+### 2. Knowledge Curation
 
 - **Deduplicate**: Merge overlapping entries across agents
 - **Correct**: Fix outdated or wrong learnings
 - **Prune**: Remove entries no longer relevant (deleted files, changed APIs)
 - **Organize**: Group related knowledge with clear headers
 
-### 3. Cross-pollination (지식 교차 전파)
+### 3. Cross-pollination
 
 When one agent's discovery benefits others:
 - reviewer finds common bug pattern → add to all dev agent memories
 - backend-dev discovers API convention → add to frontend-dev memory
 - architect makes design decision → propagate to all relevant agents
 
-### 4. Standards Promotion (표준 승격)
+### 4. Standards Promotion
 
 When a pattern appears in 2+ agent memories, promote to team rules:
 
@@ -122,7 +122,7 @@ Cross-reference DB decisions with agent memories for completeness.
 
 ## Before Returning
 
-`[COMPRESSED]` 마커를 포함한 압축 형식으로 반환하세요. compress-output 스킬 참고.
+Return in compressed format with the `[COMPRESSED]` marker. See compress-output skill.
 
 ## Guidelines
 

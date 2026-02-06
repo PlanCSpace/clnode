@@ -1,7 +1,7 @@
 ---
 name: compress-output
 description: Forces agent to compress its final output before returning to Leader. Preload this skill in agent frontmatter to enforce output compression.
-version: 2.0.1
+version: 2.0.2
 ---
 
 # MANDATORY: Compress Your Output Before Returning
@@ -13,22 +13,22 @@ version: 2.0.1
 Before returning your final response, you MUST compress it directly:
 
 1. Compose your full work report internally (do NOT output it)
-2. Compress it to **5~10줄 이내** using the format below
+2. Compress it to **10 lines max** using the format below
 3. Return ONLY the compressed output as your final message
 
 ## Output Format
 
 ```
 [COMPRESSED] agent_type: <your_type>
-변경 파일: file1.ts, file2.ts
-핵심 결과: (1-3줄 요약 — what changed, key decisions, test results)
-주요 결정사항: (있으면, 없으면 생략)
-블로커: (있으면, 없으면 생략)
+Changed files: file1.ts, file2.ts
+Result: (1-3 line summary — what changed, key decisions, test results)
+Decisions: (if any, omit if none)
+Blockers: (if any, omit if none)
 ```
 
 ## Compression Rules
 
-1. **5~10줄 이내** — hard limit, 절대 10줄 초과 금지
+1. **10 lines max** — hard limit, never exceed 10 lines. Shorter is better.
 2. **Signal over completeness** — one critical insight beats ten routine details
 3. **Changed files as evidence** — file names, not code snippets
 4. **Decisions over actions** — "chose X over Y because Z" beats "edited A, B, C"

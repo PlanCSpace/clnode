@@ -1,7 +1,7 @@
 ---
 name: compress-output
 description: Forces agent to compress its final output before returning to Leader. Preload this skill in agent frontmatter to enforce output compression.
-version: 2.0.1
+version: 2.0.2
 ---
 
 # MANDATORY: Compress Your Output Before Returning
@@ -13,7 +13,7 @@ version: 2.0.1
 Before returning your final response, you MUST compress it directly:
 
 1. Compose your full work report internally (do NOT output it)
-2. Compress it to **5-10 lines** using the format below
+2. Compress it to **10 lines max** using the format below
 3. Return ONLY the compressed output as your final message
 
 ## Output Format
@@ -28,7 +28,7 @@ Blockers: (if any, omit if none)
 
 ## Compression Rules
 
-1. **5-10 lines max** — hard limit, never exceed 10 lines
+1. **10 lines max** — hard limit, never exceed 10 lines. Shorter is better.
 2. **Signal over completeness** — one critical insight beats ten routine details
 3. **Changed files as evidence** — file names, not code snippets
 4. **Decisions over actions** — "chose X over Y because Z" beats "edited A, B, C"

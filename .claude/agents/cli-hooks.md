@@ -54,4 +54,4 @@ templates/
 
 ## Before Returning
 
-`[COMPRESSED]` 마커를 포함한 압축 형식으로 반환하세요. compress-output 스킬 참고.
+Return in compressed format with the `[COMPRESSED]` marker. See compress-output skill.

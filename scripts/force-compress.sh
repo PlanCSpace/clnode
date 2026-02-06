@@ -41,10 +41,10 @@ fi
 
 # Block stop — tell agent to compress output directly
 echo "$(date): BLOCKING — [COMPRESSED] marker not found" >> "$LOGFILE"
-echo "[COMPRESSED] 마커가 없습니다. 지금 바로 작업 결과를 아래 형식으로 압축하여 반환하세요:
+echo "[COMPRESSED] marker not found. Compress your output NOW using this format:
 [COMPRESSED] agent_type: <type>
-변경 파일: file1, file2
-핵심 결과: (1-2줄 요약)
-주요 결정사항: (있으면)
-전체 코드나 상세 설명 없이 위 형식만 반환하세요. 300자 이내." >&2
+Changed files: file1, file2
+Result: (1-3 line summary)
+Decisions: (if any)
+Return ONLY the compressed format above. 5-10 lines max." >&2
 exit 2
