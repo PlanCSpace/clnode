@@ -18,9 +18,9 @@
 </p>
 
 <p align="center">
+  <a href="https://sierraDevsec.github.io/clnode/">Docs</a> •
   <a href="./README.md">English</a> •
-  <a href="./docs/GUIDE.en.md">User Guide (English)</a> •
-  <a href="./docs/GUIDE.md">사용 가이드</a>
+  <a href="./README.ko.md">한국어</a>
 </p>
 
 ---
